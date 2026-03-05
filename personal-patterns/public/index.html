@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro de Actividades</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main class="container">
+
+        <aside class="panel-izquierdo">
+            <section class="tarjeta">
+                <h2>Registrar día</h2>
+                <form id="formRegistro">
+                    <div class="campo" style="grid-column: span 2;">
+                        <label for="actividad">Actividad</label>
+                        <input type="text" id="actividad" name="actividad" placeholder="Ej: Estudiar" required>
+                    </div>
+                    <div class="campo">
+                        <label for="jornada">Momento</label>
+                        <select id="jornada" required
+                            style="padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+                            <option value="Mañana">Mañana</option>
+                            <option value="Tarde">Tarde</option>
+                            <option value="Noche">Noche</option>
+                        </select>
+                    </div>
+                    <div class="campo">
+                        <label for="energia">Energía</label>
+                        <input type="number" id="energia" name="energia" min="0" max="10" required>
+                    </div>
+                    <div class="campo">
+                        <label for="enfoque">Enfoque</label>
+                        <input type="number" id="enfoque" name="enfoque" min="0" max="10" required>
+                    </div>
+                    <div class="campo">
+                        <label for="animo">Ánimo</label>
+                        <input type="number" id="animo" name="animo" min="0" max="10" required>
+                    </div>
+                    <button type="submit" class="btnGuardar">Guardar</button>
+                </form>
+
+                <hr class="divisor">
+                <h2>Últimos registros</h2>
+                <div id="historialLista"></div>
+            </section>
+        </aside>
+
+        <section class="panel-derecho">
+            <div class="tarjeta tarjeta-recomendacion">
+                <h2>🧠 Recomendación del día</h2>
+                <div id="recomendacionCoach">
+                    <p class="texto-secundario">Cargando datos...</p>
+                </div>
+            </div>
+            <div class="grid-2-cols">
+                <div class="tarjeta">
+                    <h2>Performance General</h2>
+                    <h3 id="score">0%</h3>
+                    <p id="comparacion" class="texto-secundario"></p>
+                </div>
+                <div class="tarjeta">
+                    <h2>Insights</h2>
+                    <div id="insights"></div>
+                </div>
+                <div class="tarjeta">
+                    <h2>Rendimiento por Momento del Día</h2>
+                    <div id="heatmapContenedor" class="grid-3-cols"></div>
+                </div>
+            </div>
+            </div>
+
+            <div class="tarjeta">
+                <h2>Progreso Global</h2>
+                <canvas id="grafico" width="600" height="150"></canvas>
+                <div id="listaPatrones" class="lista-patrones-horizontal"></div>
+            </div>
+
+            <div class="tarjeta">
+                <h2>Dashboard por Actividad</h2>
+                <div id="dashboardActividades" class="grid-actividades"></div>
+            </div>
+
+
+
+        </section>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>
