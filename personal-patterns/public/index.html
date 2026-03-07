@@ -15,79 +15,175 @@
             <section class="tarjeta">
                 <h2>Registrar día</h2>
                 <form id="formRegistro">
-                    <div class="campo" style="grid-column: span 2;">
+                    <div class="campo span-3-cols">
+                        <label>Actividades Recientes</label>
+                        <div id="quickTags" class="quick-tags-container"></div>
+                    </div>
+
+                    <div class="campo span-3-cols">
                         <label for="actividad">Actividad</label>
                         <input type="text" id="actividad" name="actividad" placeholder="Ej: Estudiar" required>
                     </div>
-                    <div class="campo">
+
+                    <div class="campo span-3-cols">
                         <label for="jornada">Momento</label>
-                        <select id="jornada" required
-                            style="padding: 8px 10px; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white;">
+                        <select id="jornada" required class="select-jornada">
                             <option value="Mañana">Mañana</option>
                             <option value="Tarde">Tarde</option>
                             <option value="Noche">Noche</option>
                         </select>
                     </div>
-                    <div class="campo">
-                        <label for="energia">Energía</label>
-                        <input type="number" id="energia" name="energia" min="0" max="10" required>
+
+                    <div class="campo-metricas">
+                        <label for="energia">Facilidad</label>
+                        <input type="range" id="energia" name="energia" min="1" max="10" value="5"
+                            class="slider-metrica">
+                        <div class="slider-labels">
+                            <span>Difícil</span>
+                            <span>Fluido</span>
+                        </div>
                     </div>
-                    <div class="campo">
-                        <label for="enfoque">Enfoque</label>
-                        <input type="number" id="enfoque" name="enfoque" min="0" max="10" required>
+
+                    <div class="campo-metricas">
+                        <label for="enfoque">Productividad</label>
+                        <input type="range" id="enfoque" name="enfoque" min="1" max="10" value="5"
+                            class="slider-metrica">
+                        <div class="slider-labels">
+                            <span>Poco</span>
+                            <span>Mucho</span>
+                        </div>
                     </div>
-                    <div class="campo">
-                        <label for="animo">Ánimo</label>
-                        <input type="number" id="animo" name="animo" min="0" max="10" required>
+
+                    <div class="campo-metricas">
+                        <label for="animo">Energía Final</label>
+                        <input type="range" id="animo" name="animo" min="1" max="10" value="5" class="slider-metrica">
+                        <div class="slider-labels">
+                            <span>Agotado</span>
+                            <span>Entero</span>
+                        </div>
                     </div>
-                    <button type="submit" class="btnGuardar">Guardar</button>
+
+                    <button type="submit" class="btnGuardar">Guardar Registro</button>
                 </form>
 
                 <hr class="divisor">
-                <h2>Últimos registros</h2>
-                <div id="historialLista"></div>
+
+                <details class="panel-analitica">
+                    <summary class="btn-desplegar">Ver Últimos Registros</summary>
+                    <div id="historialLista" class="contenedor-historial"></div>
+                </details>
             </section>
         </aside>
-
         <section class="panel-derecho">
+
             <div class="tarjeta tarjeta-recomendacion">
                 <h2>🧠 Recomendación del día</h2>
                 <div id="recomendacionCoach">
                     <p class="texto-secundario">Cargando datos...</p>
                 </div>
             </div>
-            <div class="grid-2-cols">
-                <div class="tarjeta">
-                    <h2>Performance General</h2>
-                    <h3 id="score">0%</h3>
-                    <p id="comparacion" class="texto-secundario"></p>
+
+            <div class="dashboard-layout">
+
+                <div class="columna-dashboard">
+                    <div class="tarjeta tarjeta-core">
+                        <div class="header-performance">
+                            <h2>Performance General</h2>
+                            <span id="rachaFuego" class="badge-racha">🔥 0 días</span>
+                        </div>
+                        
+                        <div class="score-radial-container">
+                            <svg class="radial-progress" viewBox="0 0 120 120">
+                                <defs>
+                                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#38bdf8" />
+                                        <stop offset="100%" stop-color="#3b82f6" />
+                                    </linearGradient>
+                                </defs>
+                                <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
+                                <circle class="radial-bar" id="scoreRadialBar" cx="60" cy="60" r="50"></circle>
+                            </svg>
+                            <div class="score-text-overlay">
+                                <h3 id="score">0%</h3>
+                            </div>
+                        </div>
+
+                        <p id="comparacion" class="texto-secundario text-center"></p>
+                        <div id="historial7Dias" class="historial-semanal"></div>
+                    </div>
+
+                    <div class="tarjeta">
+                        <h2>Insights</h2>
+                        <div id="insights"></div>
+                    </div>
                 </div>
-                <div class="tarjeta">
-                    <h2>Insights</h2>
-                    <div id="insights"></div>
+
+                <div class="columna-dashboard">
+                    <div class="tarjeta">
+                        <h2>Rendimiento del Día</h2>
+                        <div id="heatmapContenedor" class="grid-3-cols"></div>
+                    </div>
+
+                    <div class="tarjeta">
+                        <h2>Tu Rutina Ideal</h2>
+                        <button onclick="generarRutinaIdeal()" class="btnGuardar btn-rutina">Generar Plan</button>
+                        <div id="rutinaContenedor" class="grid-3-cols">
+                            <p class="texto-secundario span-3-cols">Haz clic en Generar Plan para calcular tu día
+                                óptimo.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="tarjeta">
-                    <h2>Rendimiento por Momento del Día</h2>
-                    <div id="heatmapContenedor" class="grid-3-cols"></div>
+            </div>
+
+            <details class="panel-analitica margin-top-tarjetas">
+                <summary class="btn-desplegar">Ver Herramientas Avanzadas (Simulador y Costo)</summary>
+                <div class="grid-2-cols" style="margin-top: 15px;">
+                    <div class="tarjeta tarjeta-simulador">
+                        <h2>Simulador de Rendimiento</h2>
+                        <div class="controles-simulador">
+                            <input type="text" id="simActividad" placeholder="Ej: Estudiar">
+                            <select id="simJornada" class="select-simulador">
+                                <option value="Mañana">Mañana</option>
+                                <option value="Tarde">Tarde</option>
+                                <option value="Noche">Noche</option>
+                            </select>
+                            <button onclick="calcularPrediccion()" class="btnGuardar btnSimular">Simular</button>
+                        </div>
+                        <div id="resultadoSimulador">
+                            <p class="texto-secundario">Ingresá una actividad y un momento para ver tu rendimiento
+                                esperado.</p>
+                        </div>
+                    </div>
+
+                    <div class="tarjeta">
+                        <h2>Costo Biológico</h2>
+                        <div id="costoBiologicoContenedor" class="grid-2-cols">
+                            <p class="texto-secundario span-2-cols">Cargá datos para descubrir tus motores y vampiros de
+                                energía.</p>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            </div>
+            </details>
 
-            <div class="tarjeta">
-                <h2>Progreso Global</h2>
-                <canvas id="grafico" width="600" height="150"></canvas>
-                <div id="listaPatrones" class="lista-patrones-horizontal"></div>
-            </div>
+            <details class="panel-analitica margin-top-tarjetas">
+                <summary class="btn-desplegar">Ver Analítica Global</summary>
 
-            <div class="tarjeta">
-                <h2>Dashboard por Actividad</h2>
-                <div id="dashboardActividades" class="grid-actividades"></div>
-            </div>
+                <div class="tarjeta" style="margin-top: 15px;">
+                    <h2>Progreso Global</h2>
+                    <canvas id="grafico" width="600" height="150"></canvas>
+                    <div id="listaPatrones" class="lista-patrones-horizontal"></div>
+                </div>
 
-
+                <div class="tarjeta">
+                    <h2>Dashboard por Actividad</h2>
+                    <div id="dashboardActividades" class="grid-actividades"></div>
+                </div>
+            </details>
 
         </section>
     </main>
     <script src="app.js"></script>
+    <div id="toast" class="toast-hidden">Registro guardado</div>
 </body>
+
 </html>

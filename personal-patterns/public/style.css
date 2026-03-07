@@ -1,4 +1,3 @@
-/* ===== RESET Y TIPOGRAFÍA ===== */
 * {
     margin: 0;
     padding: 0;
@@ -15,7 +14,6 @@ body {
     line-height: 1.4;
 }
 
-/* ===== CONTENEDOR PRINCIPAL (2 COLUMNAS) ===== */
 .container {
     width: 100%;
     max-width: 1100px;
@@ -25,7 +23,7 @@ body {
     align-items: start;
 }
 
-/* ===== TARJETAS GENÉRICAS ===== */
+/* ===== TARJETAS Y ESTRUCTURA ===== */
 .tarjeta {
     background: #1e293b;
     padding: 20px;
@@ -49,50 +47,62 @@ h2 {
     border-top: 1px solid #334155;
 }
 
-/* ===== TEXTOS Y MÉTRICAS ===== */
-#score {
-    font-size: 1.8rem;
-    color: #38bdf8;
-    margin-bottom: 2px;
+.grid-2-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
 }
 
-.texto-secundario {
+.grid-3-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.grid-actividades {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+/* Utilitarios de grilla y espaciado */
+.span-2-cols {
+    grid-column: span 2;
+}
+
+.span-3-cols {
+    grid-column: span 3;
+}
+
+.margin-top-tarjetas,
+.contenedor-historial {
+    margin-top: 15px;
+}
+
+/* ===== TEXTOS ===== */
+.texto-secundario,
+.texto-muted {
     font-size: 0.85rem;
     color: #94a3b8;
 }
 
-#insights p,
-.lista-patrones-horizontal p {
-    font-size: 0.85rem;
-    background: #0f172a;
-    border: 1px solid #334155;
-    padding: 8px 12px;
-    border-radius: 6px;
-    margin-bottom: 6px;
-    color: #cbd5f1;
+.texto-positivo {
+    color: #10b981;
+    font-weight: bold;
 }
 
-/* Poner los impactos globales uno al lado del otro */
-.lista-patrones-horizontal {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 15px;
+.texto-negativo {
+    color: #ef4444;
+    font-weight: bold;
 }
 
-.lista-patrones-horizontal p {
-    margin-bottom: 0;
-}
-
-/* ===== FORMULARIO ===== */
+/* ===== FORMULARIO Y SLIDERS ===== */
 form {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
-}
-
-.campo-full {
-    grid-column: span 3;
 }
 
 .campo {
@@ -101,27 +111,116 @@ form {
     gap: 4px;
 }
 
+.campo-metricas {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    grid-column: span 3;
+    margin-bottom: 10px;
+}
+
+/* ===== ETIQUETAS E INPUTS (MINIMALISTAS) ===== */
 label {
-    font-size: 0.8rem;
-    color: #94a3b8;
-    font-weight: 500;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    font-weight: 700;
+    margin-bottom: 2px;
 }
 
-input {
-    padding: 8px 10px;
-    border-radius: 6px;
-    border: 1px solid #334155;
-    background: #0f172a;
-    color: white;
+input[type="text"],
+.select-jornada,
+.select-simulador {
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #334155; /* Borde devuelto para que se vea el límite */
+    background: #0f172a; /* Fondo oscuro para mayor contraste */
+    color: #f8fafc;
     font-size: 0.9rem;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
-input:focus {
+input[type="text"] {
+    cursor: text;
+}
+
+input[type="text"]:focus,
+.select-jornada:focus,
+.select-simulador:focus {
     outline: none;
-    border-color: #38bdf8;
+    background: #1e293b;
+    border: 1px solid #38bdf8; /* Se ilumina el borde al escribir */
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1); 
 }
 
+/* ===== CAMPOS DE MÉTRICAS (DISEÑO MINIMALISTA PREMIUM) ===== */
+.campo-metricas {
+    background: rgba(30, 41, 59, 0.4);
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    padding: 16px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    grid-column: span 3;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.campo-metricas:hover {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(56, 189, 248, 0.4);
+}
+
+.campo-metricas label {
+    font-size: 0.85rem;
+    color: #f8fafc;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* SLIDER STYLES */
+.slider-metrica {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: #334155;
+    border-radius: 4px;
+    outline: none;
+    cursor: pointer;
+}
+
+.slider-metrica::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #f8fafc;
+    border: 3px solid #38bdf8;
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.slider-metrica::-webkit-slider-thumb:hover {
+    transform: scale(1.15);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+}
+
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    font-weight: 700;
+}
+
+/* ===== BOTONES Y QUICK TAGS ===== */
 .btnGuardar {
     grid-column: span 3;
     margin-top: 5px;
@@ -136,11 +235,158 @@ input:focus {
     transition: background 0.2s;
 }
 
-.btnGuardar:hover {
+.btnGuardar:hover,
+.btnSimular:hover {
     background: #2563eb;
 }
 
-/* ===== HISTORIAL ===== */
+.btnBorrar {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #ef4444;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    transition: all 0.2s;
+}
+
+.btnBorrar:hover {
+    transform: scale(1.05);
+    color: #b91c1c;
+}
+
+.btn-rutina {
+    margin-bottom: 15px;
+    width: auto;
+    padding: 8px 16px;
+}
+
+.quick-tags-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    width: 100%; /* Ocupa todo el ancho disponible */
+}
+
+.btn-tag {
+    background: transparent; 
+    border: 1px solid #38bdf8;;
+    color: #d7ebf3; 
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+/* Efecto al pasar el mouse */
+.btn-tag:hover {
+    background: rgba(56, 189, 248, 0.1); 
+    border-color: #38bdf8;
+    color: #38bdf8; 
+}
+
+/* Barra Progreso y Score */
+.score-visual-container {
+    margin: 15px 0;
+}
+
+#score {
+    font-size: 2.5rem;
+    margin-bottom: 5px;
+    color: #38bdf8;
+}
+
+/* ===== PERFORMANCE CORE (RADIAL CHART) ===== */
+.tarjeta-core {
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+}
+
+.score-radial-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin: 20px auto; /* Lo centra perfectamente */
+}
+
+.radial-progress {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg); /* Hace que la barra empiece desde arriba (las 12 en punto) */
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3)); /* Resplandor sutil */
+}
+
+.radial-bg {
+    fill: none;
+    stroke: rgba(51, 65, 85, 0.4);
+    stroke-width: 8;
+}
+
+.radial-bar {
+    fill: none;
+    stroke: url(#scoreGradient);
+    stroke-width: 8;
+    stroke-linecap: round; /* Puntas redondeadas estéticas */
+    stroke-dasharray: 314.159; /* Circunferencia exacta del círculo (2 * pi * r) */
+    stroke-dashoffset: 314.159; /* Inicia vacío */
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); /* Animación fluida premium */
+}
+
+.score-text-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#score {
+    font-size: 2.8rem;
+    color: #f8fafc;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: -1px;
+}
+
+.text-center {
+    text-align: center;
+    width: 100%;
+    display: block;
+}
+/* Header Performance y Racha */
+.header-performance {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 6px;
+}
+
+.header-performance h2 {
+    margin-bottom: 0;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.badge-racha {
+    color: #f59e0b;
+    font-weight: bold;
+    font-size: 0.9rem;
+    background: rgba(245, 158, 11, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+/* Historial y Patrones */
 .item-historial {
     display: flex;
     justify-content: space-between;
@@ -153,119 +399,24 @@ input:focus {
     border: 1px solid #334155;
 }
 
-.btnBorrar {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    font-size: 1rem;
-    padding: 2px;
+.lista-patrones-horizontal {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
 }
 
-.btnBorrar:hover {
-    transform: scale(1.15);
-}
-
-/* ===== GRILLAS DEL PANEL DERECHO ===== */
-.grid-2-cols {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-/* Grilla para los mini dashboards */
-.grid-actividades {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 15px;
-}
-
-.tarjeta-grafico {
+.lista-patrones-horizontal p {
+    font-size: 0.85rem;
     background: #0f172a;
-    padding: 12px;
-    border-radius: 8px;
     border: 1px solid #334155;
-}
-
-.tarjeta-grafico h3 {
-    font-size: 0.95rem;
-    margin-bottom: 2px;
-    color: #f8fafc;
-}
-
-.tarjeta-grafico p.tendencia {
-    font-size: 0.75rem;
-    margin-bottom: 8px;
-}
-
-.tendencia.positiva {
-    color: #10b981;
-}
-
-.tendencia.negativa {
-    color: #ef4444;
-}
-
-.tendencia.neutra {
-    color: #94a3b8;
-}
-
-canvas {
-    width: 100%;
-    background: transparent;
-}
-
-/* ===== RESPONSIVE PARA CELULARES ===== */
-@media (max-width: 800px) {
-    .container {
-        grid-template-columns: 1fr;
-    }
-
-    .grid-2-cols {
-        grid-template-columns: 1fr;
-        gap: 0;
-    }
-}
-
-/* ===== RECOMENDACIÓN DEL DÍA (COACH) ===== */
-.tarjeta-recomendacion {
-    border: 1px solid #10b981;
-    background: rgba(16, 185, 129, 0.05);
-}
-
-.tarjeta-recomendacion h2 {
-    color: #10b981;
-    border-bottom-color: rgba(16, 185, 129, 0.2);
-}
-
-.titulo-recomendacion {
-    margin-bottom: 10px;
-}
-
-.item-recomendacion {
-    margin-bottom: 5px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 0;
     color: #cbd5f1;
 }
 
-/* ===== RANKING DE ACTIVIDADES ===== */
-.item-ranking {
-    display: flex;
-    justify-content: space-between;
-    background: #0f172a;
-    padding: 8px 12px;
-    border-radius: 6px;
-    border: 1px solid #334155;
-    margin-bottom: 6px;
-    font-size: 0.85rem;
-}
-
-/* ===== HEATMAP JORNADA ===== */
-.grid-3-cols {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-top: 10px;
-}
-
+/* Heatmap */
 .item-heatmap {
     display: flex;
     flex-direction: column;
@@ -287,37 +438,333 @@ canvas {
     color: #f8fafc;
 }
 
-/* Colores dinámicos del heatmap */
-.heat-alto {
-    background: rgba(16, 185, 129, 0.15);
-    border-color: #10b981;
+.heat-alto { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
+.heat-medio { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; }
+.heat-bajo { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
+.heat-nulo { background: #0f172a; }
+
+/* Tarjetas Específicas */
+.tarjeta-recomendacion {
+    border: 1px solid #10b981;
+    background: rgba(16, 185, 129, 0.05);
 }
 
-.heat-medio {
-    background: rgba(245, 158, 11, 0.15);
-    border-color: #f59e0b;
-}
-
-.heat-bajo {
-    background: rgba(239, 68, 68, 0.15);
-    border-color: #ef4444;
-}
-
-.heat-nulo {
-    background: #0f172a;
-}
-
-/* ===== CLASES DE TEXTO REUTILIZABLES ===== */
-.texto-positivo {
+.tarjeta-recomendacion h2 {
     color: #10b981;
-    font-weight: bold;
+    border-bottom-color: rgba(16, 185, 129, 0.2);
 }
 
-.texto-negativo {
-    color: #ef4444;
-    font-weight: bold;
+.tarjeta-simulador {
+    border: 1px solid #3b82f6;
+    background: rgba(59, 130, 246, 0.05);
 }
 
-.texto-muted {
+.tarjeta-simulador h2 {
+    color: #3b82f6;
+    border-bottom-color: rgba(59, 130, 246, 0.2);
+}
+
+.tarjeta-grafico {
+    background: #0f172a;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.tarjeta-grafico h3 {
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+    color: #f8fafc;
+}
+
+.tendencia.positiva { color: #10b981; }
+.tendencia.negativa { color: #ef4444; }
+.tendencia.neutra { color: #94a3b8; }
+
+canvas {
+    width: 100%;
+    background: transparent;
+}
+
+/* Simulador Controls */
+.controles-simulador {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.controles-simulador input { flex: 2; }
+.select-simulador { flex: 1; }
+.btnSimular { flex: 1; margin-top: 0; }
+
+.resultado-prediccion {
+    text-align: center;
+    padding: 15px 10px;
+    background: #0f172a;
+    border-radius: 8px;
+    border: 1px solid #334155;
+}
+
+.numero-prediccion {
+    font-size: 2rem;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Rutina Ideal */
+.item-rutina {
+    background: rgba(56, 189, 248, 0.05);
+    border: 1px solid #38bdf8;
+    padding: 15px 10px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.item-rutina span {
     color: #94a3b8;
+    font-size: 0.85rem;
+    display: block;
+    margin-bottom: 5px;
+}
+
+.item-rutina strong {
+    color: #f8fafc;
+    font-size: 1.1rem;
+}
+
+/* Costo Biológico */
+.caja-motor,
+.caja-vampiro {
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.caja-motor {
+    background: rgba(16, 185, 129, 0.05);
+    border: 1px solid #10b981;
+}
+
+.caja-vampiro {
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid #ef4444;
+}
+
+.titulo-motor {
+    color: #10b981;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.titulo-vampiro {
+    color: #ef4444;
+    font-size: 0.85rem;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.texto-actividad {
+    color: #f8fafc;
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin: 0;
+}
+
+/* Insights Coach */
+.item-insight {
+    background: rgba(56, 189, 248, 0.05);
+    border-left: 3px solid #38bdf8;
+    padding: 12px 15px;
+    border-radius: 4px 8px 8px 4px;
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: #e2e8f0;
+    line-height: 1.5;
+}
+
+.item-insight b {
+    color: #f8fafc;
+    font-weight: 600;
+}
+
+/* Accordion / Detalles */
+.panel-analitica {
+    margin-top: 20px;
+    background: transparent;
+}
+
+.panel-analitica[open] .tarjeta {
+    margin-top: 20px;
+}
+
+.btn-desplegar {
+    background: #1e293b;
+    color: #38bdf8;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: 1px solid #334155;
+    cursor: pointer;
+    font-weight: bold;
+    list-style: none;
+    text-align: center;
+    transition: background 0.2s;
+    width: 100%;
+    display: block;
+}
+
+.btn-desplegar:hover {
+    background: #334155;
+}
+
+/* Toast */
+#toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #10b981;
+    color: #ffffff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: bold;
+    z-index: 1000;
+    transition: all 0.3s ease;
+}
+
+.toast-hidden {
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+}
+
+.toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ===== RESPONSIVE PARA CELULARES Y TABLETS ===== */
+@media (max-width: 850px) {
+    body {
+        padding: 15px 10px; /* Reduce los márgenes exteriores para ganar pantalla */
+    }
+
+    /* 1. El formulario y el dashboard principal se apilan */
+    .container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    /* 2. Rompemos las 2 columnas del panel derecho para que bajen en fila */
+    .dashboard-layout {
+        grid-template-columns: 1fr;
+        gap: 0;
+        margin-bottom: 0;
+    }
+
+    /* 3. Le devolvemos el espacio a las tarjetas que ahora están una arriba de la otra */
+    .columna-dashboard {
+        gap: 0;
+    }
+    
+    .columna-dashboard .tarjeta {
+        margin-bottom: 20px;
+    }
+
+    /* 4. Achicamos un poco los cuadros de Mañana/Tarde/Noche para que entren los 3 de ancho */
+    .grid-3-cols {
+        gap: 8px;
+    }
+
+    .item-heatmap {
+        padding: 10px 5px;
+    }
+
+    .item-heatmap strong {
+        font-size: 1.2rem; /* Achicamos un poco el número */
+    }
+
+    .item-heatmap span {
+        font-size: 0.6rem;
+    }
+
+    /* 5. Aseguramos que la tarjeta de recomendación no desborde */
+    .tarjeta-recomendacion {
+        padding: 18px;
+    }
+}
+
+/* ===== HISTORIAL 7 DÍAS (MINI GRÁFICO) ===== */
+.historial-semanal {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 60px;
+    padding-top: 15px;
+    border-top: 1px dashed rgba(51, 65, 85, 0.5); /* Línea punteada muy sutil */
+}
+
+.dia-columna {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 12%;
+}
+
+.dia-barra-bg {
+    width: 100%;
+    max-width: 8px; /* Barrita bien fina y estética */
+    height: 35px;
+    background: rgba(30, 41, 59, 0.6);
+    border-radius: 4px;
+    display: flex;
+    align-items: flex-end;
+    overflow: hidden;
+}
+
+.dia-barra-fill {
+    width: 100%;
+    background: #38bdf8;
+    border-radius: 4px;
+    transition: height 0.6s ease-out;
+}
+
+.dia-label {
+    font-size: 0.6rem;
+    color: #64748b;
+    font-weight: 700;
+}
+
+.mensaje-vacio {
+    width: 100%;
+    text-align: center;
+    margin: 0;
+}
+
+/* ===== LAYOUT COMPACTO (TIPO MASONRY) ===== */
+.dashboard-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start; /* Evita que las columnas se estiren entre sí */
+    margin-bottom: 15px;
+}
+
+.columna-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* Espacio vertical exacto entre las tarjetas de esta columna */
+}
+
+/* Le sacamos el margen inferior a las tarjetas que están dentro de las columnas para que no se sume con el gap */
+.columna-dashboard .tarjeta {
+    margin-bottom: 0;
+}
+
+/* ===== TRUCO: OCULTAR HISTORIAL SI ESTÁ VACÍO ===== */
+.historial-semanal:empty {
+    display: none;
+    margin: 0;
+    padding: 0;
+    border: none;
 }
