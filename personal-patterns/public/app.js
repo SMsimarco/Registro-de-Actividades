@@ -1,24 +1,33 @@
 let registros = [];
+let registrosFiltrados = [];
+let filtroActual = 'todo';
+let editandoId = null; 
 
-// calcular total
-function calcularScore(r) {
-    let promedio = (r.energia + r.enfoque + r.animo) / 3;
-    return promedio * 10;
-}
 
-// conexion database
+// ====== CONFIGURACIÓN SUPABASE ======
+const SUPABASE_URL = "https://ortxannsshuuxqcfkxlj.supabase.co/rest/v1/daily_logs";
+const SUPABASE_KEY = "sb_publishable_zGauV0bkumP5Q0UI6pyxhQ_BIi6eQfR";
+
+const supabaseHeaders = {
+    "Content-Type": "application/json",
+    "apikey": SUPABASE_KEY,
+    "Authorization": "Bearer " + SUPABASE_KEY
+};
+
+// ====== CONEXIÓN A BASE DE DATOS EN LA NUBE ======
 async function cargarRegistrosDesdeBD() {
     try {
-        const respuesta = await fetch("http://localhost:3000/daily-logs");
+        // Le pedimos a Supabase que traiga todos los registros ordenados por id
+        const respuesta = await fetch(SUPABASE_URL + "?select=*&order=id.asc", { 
+            headers: supabaseHeaders 
+        });
+        
         if (respuesta.ok) {
             const datos = await respuesta.json();
             registros = [];
 
             datos.forEach(d => {
-                let jornadaDefinida = d.jornada;
-                if (!jornadaDefinida) {
-                    jornadaDefinida = "No definida";
-                }
+                let jornadaDefinida = d.jornada || "No definida";
                 registros.push({
                     id: d.id,
                     fecha: d.fecha, 
@@ -30,26 +39,29 @@ async function cargarRegistrosDesdeBD() {
                 });
             });
 
-            actualizarInterfaz();
+            aplicarFiltro(); 
         }
     } catch (error) {
-        console.error("Error connecting to database", error);
+        console.error("Error conectando a Supabase", error);
     }
 }
 
 async function agregarRegistro(actividad, jornada, energia, enfoque, animo) {
-    const fecha = new Date().toISOString().split('T')[0];
+    let fechaObj = new Date();
+    fechaObj.setMinutes(fechaObj.getMinutes() - fechaObj.getTimezoneOffset());
+    const fecha = fechaObj.toISOString().split('T')[0];
+    
     try {
-        const respuesta = await fetch("http://localhost:3000/daily-log", {
+        const respuesta = await fetch(SUPABASE_URL, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: supabaseHeaders,
             body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
         });
         if (respuesta.ok) {
             await cargarRegistrosDesdeBD();
         }
     } catch (error) {
-        console.error("Error saving data", error);
+        console.error("Error guardando dato en Supabase", error);
     }
 }
 
@@ -57,27 +69,87 @@ async function borrarRegistro(id) {
     let confirmacion = confirm("¿Seguro que querés borrar este registro?");
     if (confirmacion) {
         try {
-            await fetch(`http://localhost:3000/daily-log/${id}`, { method: "DELETE" });
+            // Supabase usa el formato ?columna=eq.valor para borrar
+            await fetch(`${SUPABASE_URL}?id=eq.${id}`, { 
+                method: "DELETE",
+                headers: supabaseHeaders
+            });
             await cargarRegistrosDesdeBD();
         } catch (error) {
-            console.error("Error deleting data", error);
+            console.error("Error borrando dato en Supabase", error);
         }
     }
+}
+
+async function modificarRegistro(id, actividad, jornada, energia, enfoque, animo) {
+    let registroOriginal = registros.find(x => String(x.id) === String(id));
+    let fecha = registroOriginal ? registroOriginal.fecha : new Date().toISOString().split('T')[0];
+    
+    try {
+        // Supabase usa PATCH para actualizar
+        const respuesta = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
+            method: "PATCH",
+            headers: supabaseHeaders,
+            body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
+        });
+        if (respuesta.ok) {
+            await cargarRegistrosDesdeBD();
+        }
+    } catch (error) {
+        console.error("Error actualizando dato en Supabase", error);
+    }
+}
+
+// calcular total
+function calcularScore(r) {
+    let promedio = (r.energia + r.enfoque + r.animo) / 3;
+    return promedio * 10;
+}
+
+
+// ====== LÓGICA DE FILTROS GLOBALES ======
+function cambiarFiltro(dias, boton) {
+    filtroActual = dias;
+    
+    // UI de botones
+    let botones = document.querySelectorAll('.btn-filtro');
+    for (let i = 0; i < botones.length; i++) {
+        botones[i].classList.remove('seleccionado');
+    }
+    boton.classList.add('seleccionado');
+    
+    aplicarFiltro();
+}
+
+function aplicarFiltro() {
+    if (filtroActual === 'todo') {
+        registrosFiltrados = [...registros];
+    } else {
+        let diasRestar = parseInt(filtroActual);
+        let fechaLimite = new Date();
+        fechaLimite.setDate(fechaLimite.getDate() - diasRestar);
+        let stringLimite = fechaLimite.toISOString().split('T')[0];
+
+        registrosFiltrados = registros.filter(r => r.fecha >= stringLimite);
+    }
+    actualizarInterfaz();
 }
 
 // ====== MOTOR CENTRAL DE UI ======
 function actualizarInterfaz() {
     generarRecomendacionCoach();
     mostrarScore();
-    renderizarHistorial7Dias(); // Agregado
+    renderizarHistorial7Dias(); 
     mostrarComparacion();
     mostrarInsights();
     generarHeatmap();
-    generarRutinaIdeal(); // Para que mantenga la lógica si se agrega un dato
-    generarCostoBiologico(); // Agregado
+    generarRutinaIdeal(); 
+    generarImpactoEnergia();
     dibujarGraficoGlobal();
     mostrarHistorial();
     generarDashboardActividades();
+    
+    // Estas dos SIEMPRE miran el array global sin filtrar
     generarQuickTags();
     calcularRacha();
 }
@@ -87,14 +159,14 @@ function generarRecomendacionCoach() {
     let contenedor = document.getElementById("recomendacionCoach");
     if (!contenedor) return;
 
-    if (registros.length < 3) {
-        contenedor.innerHTML = `<p class="texto-secundario">Registrá al menos 3 actividades para que pueda analizar tu ritmo y darte consejos útiles.</p>`;
+    if (registrosFiltrados.length < 3) {
+        contenedor.innerHTML = `<p class="texto-secundario">Registrá al menos 3 actividades en este período para darte consejos útiles.</p>`;
         return;
     }
 
     let resumen = {};
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         let clave = r.actividad + "|" + r.jornada;
         if (resumen[clave] === undefined) {
             resumen[clave] = { suma: 0, cantidad: 0 };
@@ -124,14 +196,14 @@ function generarRecomendacionCoach() {
     let [peorAct, peorJor] = peorClave.split("|");
 
     let frasesPositivas = [
-        `Tu foco está al máximo cuando hacés <b>${mejorAct}</b> por la <b>${mejorJor}</b>. ¡Aprovechá ese impulso hoy!`,
+        `Tu foco está al máximo cuando hacés <b>${mejorAct}</b> por la <b>${mejorJor}</b>. ¡Aprovechá ese impulso!`,
         `Los datos no mienten: la <b>${mejorJor}</b> es tu momento de oro para <b>${mejorAct}</b>.`,
         `Si querés asegurar el día, meté <b>${mejorAct}</b> durante la <b>${mejorJor}</b>. Es tu combinación ganadora.`
     ];
 
     let frasesNegativas = [
         `Cuidado: <b>${peorAct}</b> por la <b>${peorJor}</b> suele drenarte. ¿Podés moverlo de horario?`,
-        `Noté fricción al hacer <b>${peorAct}</b> a la <b>${peorJor}</b>. Si podés, evitalo hoy.`,
+        `Noté fricción al hacer <b>${peorAct}</b> a la <b>${peorJor}</b>. Si podés, evitalo.`,
         `Tu energía cae cuando intentás <b>${peorAct}</b> por la <b>${peorJor}</b>. ¡Tenelo en cuenta!`
     ];
 
@@ -144,7 +216,7 @@ function generarRecomendacionCoach() {
     let esOtraJornada = mejorJor !== peorJor;
 
     if (peorPromedio < 65 && (esOtraActividad || esOtraJornada)) {
-        html += `<p class="item-recomendacion texto-secundario"> ${frasesNegativas[indiceNegativo]}</p>`;
+        html += `<p class="item-recomendacion texto-secundario">${frasesNegativas[indiceNegativo]}</p>`;
     }
 
     contenedor.innerHTML = html;
@@ -159,13 +231,13 @@ function mostrarScore() {
     
     let circunferencia = 314.159;
 
-    if (registros.length === 0) { 
+    if (registrosFiltrados.length === 0) { 
         contenedor.innerText = "0%"; 
         if (barraRadial) barraRadial.style.strokeDashoffset = circunferencia;
         return; 
     }
     
-    let ultimo = registros[registros.length - 1];
+    let ultimo = registrosFiltrados[registrosFiltrados.length - 1];
     let scoreCalculado = calcularScore(ultimo);
     
     contenedor.innerText = scoreCalculado.toFixed(0) + "%";
@@ -180,22 +252,22 @@ function mostrarComparacion() {
     let contenedor = document.getElementById("comparacion");
     if (!contenedor) return;
 
-    if (registros.length < 2) {
-        contenedor.innerText = "Cargá más datos para comparar";
+    if (registrosFiltrados.length < 2) {
+        contenedor.innerText = "Faltan datos para comparar";
         return;
     }
 
-    let hoy = registros[registros.length - 1];
-    let ayer = registros[registros.length - 2];
+    let hoy = registrosFiltrados[registrosFiltrados.length - 1];
+    let ayer = registrosFiltrados[registrosFiltrados.length - 2];
     let dif = calcularScore(hoy) - calcularScore(ayer);
 
     if (dif > 0) {
-        contenedor.innerHTML = `Subiste un <span class="texto-positivo">${dif.toFixed(0)}%</span> respecto a ayer `;
+        contenedor.innerHTML = `Subiste un <span class="texto-positivo">${dif.toFixed(0)}%</span> respecto al registro anterior`;
     } else if (dif < 0) {
         let difPositiva = Math.abs(dif);
-        contenedor.innerHTML = `Bajaste un <span class="texto-negativo">${difPositiva.toFixed(0)}%</span> respecto a ayer `;
+        contenedor.innerHTML = `Bajaste un <span class="texto-negativo">${difPositiva.toFixed(0)}%</span> respecto al registro anterior`;
     } else {
-        contenedor.innerText = "Igual que ayer";
+        contenedor.innerText = "Igual que el registro anterior";
     }
 }
 
@@ -206,11 +278,11 @@ function renderizarHistorial7Dias() {
 
     contenedor.innerHTML = ""; 
 
-    if (registros.length === 0) {
+    if (registrosFiltrados.length === 0) {
         contenedor.style.borderTop = "none";
         let p = document.createElement("p");
         p.className = "texto-secundario mensaje-vacio";
-        p.innerText = "Sin datos suficientes.";
+        p.innerText = "Sin datos en este período.";
         contenedor.appendChild(p);
         return;
     }
@@ -220,8 +292,8 @@ function renderizarHistorial7Dias() {
     let datosPorDia = {};
     let fechasOrdenadas = [];
 
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         let f = r.fecha;
         if (datosPorDia[f] === undefined) {
             datosPorDia[f] = { suma: 0, cantidad: 0 };
@@ -238,7 +310,7 @@ function renderizarHistorial7Dias() {
         let f = ultimosDias[i];
         let promedio = datosPorDia[f].suma / datosPorDia[f].cantidad;
         
-        let partesFecha = f.split("-"); // Ajustado para el formato ISO YYYY-MM-DD
+        let partesFecha = f.split("-"); 
         let labelDia = partesFecha.length >= 3 ? partesFecha[2] + "/" + partesFecha[1] : "Día";
 
         let colDiv = document.createElement("div");
@@ -268,8 +340,8 @@ function mostrarInsights() {
     if (!contenedor) return;
     contenedor.innerHTML = "";
 
-    if (registros.length < 2) {
-        contenedor.innerHTML = "<p class='texto-secundario'>Cargá un par de días más para que pueda encontrar tus patrones ocultos.</p>";
+    if (registrosFiltrados.length < 2) {
+        contenedor.innerHTML = "<p class='texto-secundario'>Cargá datos para que pueda encontrar tus patrones ocultos.</p>";
         return;
     }
 
@@ -283,7 +355,7 @@ function mostrarInsights() {
             contenedor.appendChild(div);
         }
     } else {
-        contenedor.innerHTML = "<p class='texto-secundario'>Tu rendimiento es súper parejo. A medida que registres más, te iré tirando tips personalizados.</p>";
+        contenedor.innerHTML = "<p class='texto-secundario'>Tu rendimiento es súper parejo. A medida que registres más, te iré tirando tips.</p>";
     }
 }
 
@@ -291,8 +363,8 @@ function analizarJornadas() {
     let analisis = {};
     let mensajes = [];
 
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         if (analisis[r.actividad] === undefined) {
             analisis[r.actividad] = { "Mañana": [], "Tarde": [], "Noche": [] };
         }
@@ -331,11 +403,11 @@ function analizarJornadas() {
             let difPuntos = promedios[mejorJornada] - promedios[peorJornada];
 
             if (difPuntos >= 1.5 || promedios[mejorJornada] >= 8) {
-                let frase = `💡 <b>${act}</b> por la <b>${mejorJornada}</b> hace que tu productividad se dispare. Es tu momento ideal para el trabajo profundo.`;
+                let frase = `💡 <b>${act}</b> por la <b>${mejorJornada}</b> dispara tu productividad.`;
                 mensajes.push(frase);
             } 
             else if (promedios[peorJornada] <= 4 && difPuntos >= 1) {
-                let frase = `⚠️ <b>${act}</b> por la <b>${peorJornada}</b> te está costando demasiado. Tratá de moverlo a la ${mejorJornada} para no frustrarte.`;
+                let frase = `⚠️ <b>${act}</b> por la <b>${peorJornada}</b> te está costando demasiado.`;
                 mensajes.push(frase);
             }
         }
@@ -347,8 +419,8 @@ function generarHeatmap() {
     let contenedor = document.getElementById("heatmapContenedor");
     if (!contenedor) return;
 
-    if (registros.length === 0) {
-        contenedor.innerHTML = "<p class='texto-secundario' style='grid-column: span 3;'>Cargá datos para ver tu rendimiento.</p>";
+    if (registrosFiltrados.length === 0) {
+        contenedor.innerHTML = "<p class='texto-secundario' style='grid-column: span 3;'>Sin datos en este período.</p>";
         return;
     }
 
@@ -358,7 +430,7 @@ function generarHeatmap() {
         "Noche": { suma: 0, cantidad: 0 }
     };
 
-    registros.forEach(r => {
+    registrosFiltrados.forEach(r => {
         if (resumen[r.jornada]) {
             resumen[r.jornada].suma += calcularScore(r);
             resumen[r.jornada].cantidad++;
@@ -370,25 +442,18 @@ function generarHeatmap() {
 
     momentos.forEach(momento => {
         let datos = resumen[momento];
-
         let promedio = 0;
+        
         if (datos.cantidad > 0) {
             promedio = Math.round(datos.suma / datos.cantidad);
         }
 
         let colorClase = "heat-nulo";
-        if (promedio >= 80) {
-            colorClase = "heat-alto";
-        } else if (promedio >= 60) {
-            colorClase = "heat-medio";
-        } else if (promedio > 0) {
-            colorClase = "heat-bajo";
-        }
+        if (promedio >= 80) colorClase = "heat-alto";
+        else if (promedio >= 60) colorClase = "heat-medio";
+        else if (promedio > 0) colorClase = "heat-bajo";
 
-        let textoPromedio = "-";
-        if (promedio > 0) {
-            textoPromedio = promedio + "%";
-        }
+        let textoPromedio = promedio > 0 ? promedio + "%" : "-";
 
         contenedor.innerHTML += `
             <div class="item-heatmap ${colorClase}">
@@ -404,13 +469,16 @@ function mostrarHistorial() {
     if (!contenedor) return;
     contenedor.innerHTML = "";
 
-    let ultimos = registros.slice(-5).reverse();
+    let ultimos = registrosFiltrados.slice(-5).reverse();
     ultimos.forEach(r => {
         let div = document.createElement("div");
         div.className = "item-historial";
         div.innerHTML = `
             <span><b>${r.actividad}</b> (${r.jornada}) <br> <small class="texto-muted">Enrg: ${r.energia} | Enf: ${r.enfoque} | Anim: ${r.animo}</small></span>
-            <button onclick="borrarRegistro(${r.id})" class="btnBorrar">Eliminar</button>
+            <div class="acciones-historial">
+                <button onclick="cargarParaEditar('${r.id}')" class="btnEditar">Editar</button>
+                <button onclick="borrarRegistro('${r.id}')" class="btnBorrar">Eliminar</button>
+            </div>
         `;
         contenedor.appendChild(div);
     });
@@ -418,35 +486,27 @@ function mostrarHistorial() {
 
 function dibujarGraficoGlobal() {
     let canvas = document.getElementById("grafico");
-    if (!canvas || registros.length === 0) return;
+    if (!canvas || registrosFiltrados.length === 0) return;
 
     let ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    let cantidadPuntos = 1;
-    if (registros.length > 1) {
-        cantidadPuntos = registros.length - 1;
-    }
-
+    let cantidadPuntos = registrosFiltrados.length > 1 ? registrosFiltrados.length - 1 : 1;
     let espacioX = canvas.width / cantidadPuntos;
+    
     ctx.beginPath();
     ctx.strokeStyle = "#38bdf8";
     ctx.lineWidth = 3;
 
-    registros.forEach((r, i) => {
+    registrosFiltrados.forEach((r, i) => {
         let x = i * espacioX;
         let y = canvas.height - (calcularScore(r) * canvas.height / 100);
-
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.stroke();
 
     ctx.fillStyle = "#ffffff";
-    registros.forEach((r, i) => {
+    registrosFiltrados.forEach((r, i) => {
         let x = i * espacioX;
         let y = canvas.height - (calcularScore(r) * canvas.height / 100);
         ctx.beginPath();
@@ -462,7 +522,7 @@ function generarDashboardActividades() {
 
     let datosPorActividad = {};
 
-    registros.forEach(r => {
+    registrosFiltrados.forEach(r => {
         if (!datosPorActividad[r.actividad]) {
             datosPorActividad[r.actividad] = [];
         }
@@ -478,11 +538,10 @@ function generarDashboardActividades() {
             let claseTendencia = "neutra";
 
             if (dif > 0) {
-                textoTendencia = `Mejoraste un ${dif.toFixed(0)}% respecto a la última vez`;
+                textoTendencia = `Mejoraste un ${dif.toFixed(0)}%`;
                 claseTendencia = "positiva";
             } else if (dif < 0) {
-                let difPositiva = Math.abs(dif);
-                textoTendencia = `Empeoraste un ${difPositiva.toFixed(0)}% respecto a la última vez`;
+                textoTendencia = `Empeoraste un ${Math.abs(dif).toFixed(0)}%`;
                 claseTendencia = "negativa";
             }
 
@@ -506,11 +565,7 @@ function dibujarMiniGrafico(canvas, scores) {
     let ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    let cantidadPuntos = 1;
-    if (scores.length > 1) {
-        cantidadPuntos = scores.length - 1;
-    }
-
+    let cantidadPuntos = scores.length > 1 ? scores.length - 1 : 1;
     let espacioX = canvas.width / cantidadPuntos;
 
     ctx.beginPath();
@@ -520,12 +575,7 @@ function dibujarMiniGrafico(canvas, scores) {
     scores.forEach((score, i) => {
         let x = i * espacioX;
         let y = canvas.height - (score * canvas.height / 100);
-
-        if (i === 0) {
-            ctx.moveTo(x, y);
-        } else {
-            ctx.lineTo(x, y);
-        }
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     });
     ctx.stroke();
 
@@ -558,8 +608,9 @@ function calcularPrediccion() {
     let exactas = [];
     let similares = [];
 
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    // Ahora simula usando los datos del período filtrado
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         if (r.actividad.toLowerCase() === actBuscada) {
             similares.push(r);
             if (r.jornada === jorBuscada) {
@@ -580,44 +631,44 @@ function calcularPrediccion() {
         let puntaje = sacarPromedio(exactas);
         contenedor.innerHTML = `
             <span class="numero-prediccion texto-positivo">${puntaje}%</span>
-            <p class="texto-secundario">Basado en ${exactas.length} veces que hiciste esto a la ${jorBuscada}.</p>
+            <p class="texto-secundario">Basado en tu historial reciente en este horario.</p>
         `;
     } else if (similares.length > 0) {
         let puntaje = sacarPromedio(similares);
         contenedor.innerHTML = `
             <span class="numero-prediccion texto-muted">${puntaje}%</span>
-            <p class="texto-secundario">No lo registraste a la ${jorBuscada}, pero tu promedio general es este.</p>
+            <p class="texto-secundario">No lo hiciste a la ${jorBuscada}, este es tu promedio general.</p>
         `;
     } else {
         contenedor.innerHTML = `
             <span class="numero-prediccion texto-muted">?</span>
-            <p class="texto-secundario">No hay datos previos. ¡Hacelo y registralo!</p>
+            <p class="texto-secundario">No hay datos en este período.</p>
         `;
     }
 }
 
-// ====== COSTO BIOLÓGICO ======
-function generarCostoBiologico() {
-    let contenedor = document.getElementById("costoBiologicoContenedor");
-    if (contenedor === null) return;
+// ====== IMPACTO DE ENERGÍA ======
+function generarImpactoEnergia() {
+    let contenedor = document.getElementById("impactoEnergiaContenedor");
+    if (!contenedor) return;
 
-    if (registros.length < 2) {
-        contenedor.innerHTML = "<p class='texto-secundario span-2-cols'>Cargá más datos para descubrir tus motores y vampiros de energía.</p>";
+    if (registrosFiltrados.length < 2) {
+        contenedor.innerHTML = "<p class='texto-secundario'>Faltan datos en este período para medir tu energía.</p>";
         return;
     }
 
     let resumenAnimo = {};
 
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         let act = r.actividad;
 
         if (resumenAnimo[act] === undefined) {
             resumenAnimo[act] = { suma: 0, cantidad: 0 };
         }
 
-        resumenAnimo[act].suma = resumenAnimo[act].suma + r.animo;
-        resumenAnimo[act].cantidad = resumenAnimo[act].cantidad + 1;
+        resumenAnimo[act].suma += r.animo;
+        resumenAnimo[act].cantidad += 1;
     }
 
     let mejorActividad = "Ninguna";
@@ -642,22 +693,29 @@ function generarCostoBiologico() {
     }
 
     if (mejorActividad === peorActividad) {
-        contenedor.innerHTML = "<p class='texto-secundario span-2-cols'>Tu energía se mantiene estable. Registrá diferentes actividades para poder compararlas.</p>";
+        contenedor.innerHTML = "<p class='texto-secundario'>Tu energía se mantiene estable con estas actividades.</p>";
         return;
     }
 
     contenedor.innerHTML = `
-        <div class="caja-motor">
-            <span class="titulo-motor">Te recarga</span>
-            <p class="texto-actividad">${mejorActividad}</p>
+        <div class="item-energia energia-positiva">
+            <div class="energia-info">
+                <span class="energia-titulo">${mejorActividad}</span>
+                <span class="energia-sub">Terminás con energía</span>
+            </div>
+            <span class="energia-icono">🔋</span>
         </div>
-        <div class="caja-vampiro">
-            <span class="titulo-vampiro">Te drena</span>
-            <p class="texto-actividad">${peorActividad}</p>
+        <div class="item-energia energia-negativa">
+            <div class="energia-info">
+                <span class="energia-titulo">${peorActividad}</span>
+                <span class="energia-sub">Terminás agotado</span>
+            </div>
+            <span class="energia-icono">🪫</span>
         </div>
     `;
 }
 
+// NOTA: QuickTags sigue buscando en TODA la base de datos para sugerirte siempre tus hábitos globales.
 function generarQuickTags() {
     let contenedor = document.getElementById("quickTags");
     if (!contenedor) return;
@@ -666,25 +724,15 @@ function generarQuickTags() {
 
     for (let i = 0; i < registros.length; i++) {
         let act = registros[i].actividad;
-        if (conteoActividades[act] === undefined) {
-            conteoActividades[act] = 1;
-        } else {
-            conteoActividades[act] = conteoActividades[act] + 1;
-        }
+        if (conteoActividades[act] === undefined) conteoActividades[act] = 1;
+        else conteoActividades[act]++;
     }
 
     let actividadesUnicas = Object.keys(conteoActividades);
-
-    actividadesUnicas.sort(function (a, b) {
-        return conteoActividades[b] - conteoActividades[a];
-    });
+    actividadesUnicas.sort((a, b) => conteoActividades[b] - conteoActividades[a]);
 
     contenedor.innerHTML = "";
-
-    let maxBotones = 4;
-    if (actividadesUnicas.length < 4) {
-        maxBotones = actividadesUnicas.length;
-    }
+    let maxBotones = actividadesUnicas.length < 4 ? actividadesUnicas.length : 4;
 
     for (let i = 0; i < maxBotones; i++) {
         let nombre = actividadesUnicas[i];
@@ -692,11 +740,7 @@ function generarQuickTags() {
         btn.type = "button";
         btn.className = "btn-tag";
         btn.innerText = nombre;
-
-        btn.onclick = function () {
-            document.getElementById("actividad").value = nombre;
-        };
-
+        btn.onclick = () => document.getElementById("actividad").value = nombre;
         contenedor.appendChild(btn);
     }
 }
@@ -706,16 +750,12 @@ function setAutoMomento() {
     if (!select) return;
 
     let horaActual = new Date().getHours();
-    
-    if (horaActual >= 5 && horaActual < 13) {
-        select.value = "Mañana";
-    } else if (horaActual >= 13 && horaActual < 20) {
-        select.value = "Tarde";
-    } else {
-        select.value = "Noche";
-    }
+    if (horaActual >= 5 && horaActual < 13) select.value = "Mañana";
+    else if (horaActual >= 13 && horaActual < 20) select.value = "Tarde";
+    else select.value = "Noche";
 }
 
+// NOTA: La Racha SIEMPRE analiza toda la BD, el filtro de tiempo no la corta artificialmente.
 function calcularRacha() {
     let contenedor = document.getElementById("rachaFuego");
     if (!contenedor) return;
@@ -727,27 +767,13 @@ function calcularRacha() {
 
     let fechasGuardadas = [];
     for (let i = 0; i < registros.length; i++) {
-        let fechaRegistro = registros[i].fecha;
-        
-        if (fechaRegistro !== undefined && fechaRegistro !== null) {
-            let yaExiste = false;
-            for (let j = 0; j < fechasGuardadas.length; j++) {
-                if (fechasGuardadas[j] === fechaRegistro) {
-                    yaExiste = true;
-                    break; 
-                }
-            }
-            if (yaExiste === false) {
-                fechasGuardadas.push(fechaRegistro);
-            }
+        let f = registros[i].fecha;
+        if (f && !fechasGuardadas.includes(f)) {
+            fechasGuardadas.push(f);
         }
     }
 
-    fechasGuardadas.sort(function(a, b) {
-        if (a > b) return -1;
-        if (a < b) return 1;
-        return 0;
-    });
+    fechasGuardadas.sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
 
     if (fechasGuardadas.length === 0) {
         contenedor.innerHTML = "🔥 0 días";
@@ -758,11 +784,9 @@ function calcularRacha() {
         let anio = fechaObj.getFullYear();
         let mes = fechaObj.getMonth() + 1;
         let dia = fechaObj.getDate();
-        
         if (mes < 10) mes = "0" + mes;
         if (dia < 10) dia = "0" + dia;
-        
-        return anio + "-" + mes + "-" + dia;
+        return `${anio}-${mes}-${dia}`;
     }
 
     let hoyObj = new Date();
@@ -790,9 +814,8 @@ function calcularRacha() {
 
     for (let i = 1; i < fechasGuardadas.length; i++) {
         let stringEsperado = obtenerStringFecha(fechaEsperadaObj);
-        
         if (fechasGuardadas[i] === stringEsperado) {
-            racha = racha + 1;
+            racha++;
             fechaEsperadaObj.setDate(fechaEsperadaObj.getDate() - 1); 
         } else {
             break; 
@@ -807,29 +830,22 @@ function mostrarToast() {
     if (!toast) return;
     
     toast.className = "toast-visible";
-    
-    setTimeout(function() {
-        toast.className = "toast-hidden";
-    }, 3000);
+    setTimeout(() => toast.className = "toast-hidden", 3000);
 }
 
 function generarRutinaIdeal() {
     let contenedor = document.getElementById("rutinaContenedor");
     if (contenedor === null) return;
 
-    if (registros.length < 5) {
-        contenedor.innerHTML = "<p class='texto-secundario span-3-cols'>Cargá más datos (al menos 5 registros) para generar una rutina.</p>";
+    if (registrosFiltrados.length < 5) {
+        contenedor.innerHTML = "<p class='texto-secundario span-3-cols'>Faltan datos en este período para armar la rutina.</p>";
         return;
     }
 
-    let promediosPorJornada = {
-        "Mañana": {},
-        "Tarde": {},
-        "Noche": {}
-    };
+    let promediosPorJornada = { "Mañana": {}, "Tarde": {}, "Noche": {} };
 
-    for (let i = 0; i < registros.length; i++) {
-        let r = registros[i];
+    for (let i = 0; i < registrosFiltrados.length; i++) {
+        let r = registrosFiltrados[i];
         let jor = r.jornada;
         let act = r.actividad;
         
@@ -837,18 +853,12 @@ function generarRutinaIdeal() {
             if (promediosPorJornada[jor][act] === undefined) {
                 promediosPorJornada[jor][act] = { suma: 0, cantidad: 0 };
             }
-            let score = calcularScore(r);
-            promediosPorJornada[jor][act].suma = promediosPorJornada[jor][act].suma + score;
-            promediosPorJornada[jor][act].cantidad = promediosPorJornada[jor][act].cantidad + 1;
+            promediosPorJornada[jor][act].suma += calcularScore(r);
+            promediosPorJornada[jor][act].cantidad += 1;
         }
     }
 
-    let rutina = {
-        "Mañana": "Libre",
-        "Tarde": "Libre",
-        "Noche": "Libre"
-    };
-
+    let rutina = { "Mañana": "Libre", "Tarde": "Libre", "Noche": "Libre" };
     let actividadesUsadas = [];
     let momentos = ["Mañana", "Tarde", "Noche"];
     
@@ -860,14 +870,7 @@ function generarRutinaIdeal() {
         let mejorPromedio = -1;
 
         for (let act in actividades) {
-            let yaUsada = false;
-            for (let k = 0; k < actividadesUsadas.length; k++) {
-                if (actividadesUsadas[k] === act) {
-                    yaUsada = true;
-                }
-            }
-
-            if (yaUsada === false) {
+            if (!actividadesUsadas.includes(act)) {
                 let prom = actividades[act].suma / actividades[act].cantidad;
                 if (prom > mejorPromedio) {
                     mejorPromedio = prom;
@@ -894,8 +897,33 @@ function generarRutinaIdeal() {
                 <strong>${act}</strong>
             </div>
         `;
-        contenedor.innerHTML = contenedor.innerHTML + htmlCaja;
+        contenedor.innerHTML += htmlCaja;
     }
+}
+
+function cargarParaEditar(id) {
+    let r = registros.find(x => String(x.id) === String(id));
+    
+    if (!r) {
+        console.error("No se encontró el registro con ID:", id);
+        return;
+    }
+    
+    editandoId = id;
+    
+    document.getElementById("actividad").value = r.actividad;
+    document.getElementById("jornada").value = r.jornada;
+    document.getElementById("energia").value = r.energia;
+    document.getElementById("enfoque").value = r.enfoque;
+    document.getElementById("animo").value = r.animo;
+    
+    let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
+    if (btnGuardar) {
+        btnGuardar.innerText = "Actualizar Registro";
+        btnGuardar.style.background = "#10b981"; 
+    }
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' }); 
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -910,8 +938,23 @@ document.addEventListener('DOMContentLoaded', () => {
             let enfoque = document.getElementById("enfoque").value;
             let animo = document.getElementById("animo").value;
 
-            await agregarRegistro(actividad, jornada, energia, enfoque, animo);
+            if (editandoId !== null) {
+                // Modo Edición
+                await modificarRegistro(editandoId, actividad, jornada, energia, enfoque, animo);
+                editandoId = null; // Reiniciamos el estado
+                
+                let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
+                if (btnGuardar) {
+                    btnGuardar.innerText = "Guardar Registro";
+                    btnGuardar.style.background = "#3b82f6"; // Vuelve al azul original
+                }
+            } else {
+                // Modo Creación
+                await agregarRegistro(actividad, jornada, energia, enfoque, animo);
+            }
+
             form.reset();
+            setAutoMomento(); // Restauramos el selector de tiempo por defecto
             mostrarToast();
         });
     }

@@ -134,8 +134,10 @@ input[type="text"],
 .select-simulador {
     padding: 10px 12px;
     border-radius: 8px;
-    border: 1px solid #334155; /* Borde devuelto para que se vea el límite */
-    background: #0f172a; /* Fondo oscuro para mayor contraste */
+    border: 1px solid #334155;
+    /* Borde devuelto para que se vea el límite */
+    background: #0f172a;
+    /* Fondo oscuro para mayor contraste */
     color: #f8fafc;
     font-size: 0.9rem;
     transition: all 0.2s ease;
@@ -151,8 +153,9 @@ input[type="text"]:focus,
 .select-simulador:focus {
     outline: none;
     background: #1e293b;
-    border: 1px solid #38bdf8; /* Se ilumina el borde al escribir */
-    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1); 
+    border: 1px solid #38bdf8;
+    /* Se ilumina el borde al escribir */
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
 }
 
 /* ===== CAMPOS DE MÉTRICAS (DISEÑO MINIMALISTA PREMIUM) ===== */
@@ -256,6 +259,28 @@ input[type="text"]:focus,
     color: #b91c1c;
 }
 
+/* Botón de Editar y contenedor para que no se amontonen */
+.acciones-historial {
+    display: flex;
+    gap: 8px;
+}
+
+.btnEditar {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #38bdf8;
+    font-size: 0.85rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    transition: all 0.2s;
+}
+
+.btnEditar:hover {
+    transform: scale(1.05);
+    color: #0284c7;
+}
+
 .btn-rutina {
     margin-bottom: 15px;
     width: auto;
@@ -267,13 +292,15 @@ input[type="text"]:focus,
     gap: 8px;
     margin-bottom: 10px;
     flex-wrap: wrap;
-    width: 100%; /* Ocupa todo el ancho disponible */
+    width: 100%;
+    /* Ocupa todo el ancho disponible */
 }
 
 .btn-tag {
-    background: transparent; 
-    border: 1px solid #38bdf8;;
-    color: #d7ebf3; 
+    background: transparent;
+    border: 1px solid #38bdf8;
+    ;
+    color: #d7ebf3;
     padding: 6px 14px;
     border-radius: 20px;
     font-size: 0.75rem;
@@ -283,9 +310,9 @@ input[type="text"]:focus,
 
 /* Efecto al pasar el mouse */
 .btn-tag:hover {
-    background: rgba(56, 189, 248, 0.1); 
+    background: rgba(56, 189, 248, 0.1);
     border-color: #38bdf8;
-    color: #38bdf8; 
+    color: #38bdf8;
 }
 
 /* Barra Progreso y Score */
@@ -310,14 +337,17 @@ input[type="text"]:focus,
     position: relative;
     width: 150px;
     height: 150px;
-    margin: 20px auto; /* Lo centra perfectamente */
+    margin: 20px auto;
+    /* Lo centra perfectamente */
 }
 
 .radial-progress {
     width: 100%;
     height: 100%;
-    transform: rotate(-90deg); /* Hace que la barra empiece desde arriba (las 12 en punto) */
-    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3)); /* Resplandor sutil */
+    transform: rotate(-90deg);
+    /* Hace que la barra empiece desde arriba (las 12 en punto) */
+    filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.3));
+    /* Resplandor sutil */
 }
 
 .radial-bg {
@@ -330,10 +360,14 @@ input[type="text"]:focus,
     fill: none;
     stroke: url(#scoreGradient);
     stroke-width: 8;
-    stroke-linecap: round; /* Puntas redondeadas estéticas */
-    stroke-dasharray: 314.159; /* Circunferencia exacta del círculo (2 * pi * r) */
-    stroke-dashoffset: 314.159; /* Inicia vacío */
-    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1); /* Animación fluida premium */
+    stroke-linecap: round;
+    /* Puntas redondeadas estéticas */
+    stroke-dasharray: 314.159;
+    /* Circunferencia exacta del círculo (2 * pi * r) */
+    stroke-dashoffset: 314.159;
+    /* Inicia vacío */
+    transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Animación fluida premium */
 }
 
 .score-text-overlay {
@@ -361,6 +395,7 @@ input[type="text"]:focus,
     width: 100%;
     display: block;
 }
+
 /* Header Performance y Racha */
 .header-performance {
     display: flex;
@@ -438,10 +473,24 @@ input[type="text"]:focus,
     color: #f8fafc;
 }
 
-.heat-alto { background: rgba(16, 185, 129, 0.15); border-color: #10b981; }
-.heat-medio { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; }
-.heat-bajo { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; }
-.heat-nulo { background: #0f172a; }
+.heat-alto {
+    background: rgba(16, 185, 129, 0.15);
+    border-color: #10b981;
+}
+
+.heat-medio {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+}
+
+.heat-bajo {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+}
+
+.heat-nulo {
+    background: #0f172a;
+}
 
 /* Tarjetas Específicas */
 .tarjeta-recomendacion {
@@ -477,9 +526,17 @@ input[type="text"]:focus,
     color: #f8fafc;
 }
 
-.tendencia.positiva { color: #10b981; }
-.tendencia.negativa { color: #ef4444; }
-.tendencia.neutra { color: #94a3b8; }
+.tendencia.positiva {
+    color: #10b981;
+}
+
+.tendencia.negativa {
+    color: #ef4444;
+}
+
+.tendencia.neutra {
+    color: #94a3b8;
+}
 
 canvas {
     width: 100%;
@@ -493,9 +550,18 @@ canvas {
     margin-bottom: 15px;
 }
 
-.controles-simulador input { flex: 2; }
-.select-simulador { flex: 1; }
-.btnSimular { flex: 1; margin-top: 0; }
+.controles-simulador input {
+    flex: 2;
+}
+
+.select-simulador {
+    flex: 1;
+}
+
+.btnSimular {
+    flex: 1;
+    margin-top: 0;
+}
 
 .resultado-prediccion {
     text-align: center;
@@ -532,43 +598,59 @@ canvas {
     font-size: 1.1rem;
 }
 
-/* Costo Biológico */
-.caja-motor,
-.caja-vampiro {
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
+/* ===== IMPACTO DE ENERGÍA ===== */
+.contenedor-impacto {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 15px;
 }
 
-.caja-motor {
-    background: rgba(16, 185, 129, 0.05);
-    border: 1px solid #10b981;
+.item-energia {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 10px;
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    transition: background 0.2s;
 }
 
-.caja-vampiro {
-    background: rgba(239, 68, 68, 0.05);
-    border: 1px solid #ef4444;
+.item-energia:hover {
+    background: rgba(30, 41, 59, 0.7);
 }
 
-.titulo-motor {
-    color: #10b981;
-    font-size: 0.85rem;
-    margin-bottom: 5px;
-    display: block;
+.energia-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.titulo-vampiro {
-    color: #ef4444;
-    font-size: 0.85rem;
-    margin-bottom: 5px;
-    display: block;
-}
-
-.texto-actividad {
+.energia-titulo {
+    font-size: 1rem;
     color: #f8fafc;
-    font-weight: bold;
-    font-size: 1.1rem;
-    margin: 0;
+    font-weight: 600;
+}
+
+.energia-sub {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+}
+
+.energia-positiva .energia-sub {
+    color: #10b981;
+}
+
+.energia-negativa .energia-sub {
+    color: #ef4444;
+}
+
+.energia-icono {
+    font-size: 1.5rem;
+    opacity: 0.9;
 }
 
 /* Insights Coach */
@@ -645,7 +727,8 @@ canvas {
 /* ===== RESPONSIVE PARA CELULARES Y TABLETS ===== */
 @media (max-width: 850px) {
     body {
-        padding: 15px 10px; /* Reduce los márgenes exteriores para ganar pantalla */
+        padding: 15px 10px;
+        /* Reduce los márgenes exteriores para ganar pantalla */
     }
 
     /* 1. El formulario y el dashboard principal se apilan */
@@ -665,7 +748,7 @@ canvas {
     .columna-dashboard {
         gap: 0;
     }
-    
+
     .columna-dashboard .tarjeta {
         margin-bottom: 20px;
     }
@@ -680,7 +763,8 @@ canvas {
     }
 
     .item-heatmap strong {
-        font-size: 1.2rem; /* Achicamos un poco el número */
+        font-size: 1.2rem;
+        /* Achicamos un poco el número */
     }
 
     .item-heatmap span {
@@ -700,7 +784,8 @@ canvas {
     align-items: flex-end;
     height: 60px;
     padding-top: 15px;
-    border-top: 1px dashed rgba(51, 65, 85, 0.5); /* Línea punteada muy sutil */
+    border-top: 1px dashed rgba(51, 65, 85, 0.5);
+    /* Línea punteada muy sutil */
 }
 
 .dia-columna {
@@ -713,7 +798,8 @@ canvas {
 
 .dia-barra-bg {
     width: 100%;
-    max-width: 8px; /* Barrita bien fina y estética */
+    max-width: 8px;
+    /* Barrita bien fina y estética */
     height: 35px;
     background: rgba(30, 41, 59, 0.6);
     border-radius: 4px;
@@ -746,14 +832,16 @@ canvas {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
-    align-items: start; /* Evita que las columnas se estiren entre sí */
+    align-items: start;
+    /* Evita que las columnas se estiren entre sí */
     margin-bottom: 15px;
 }
 
 .columna-dashboard {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Espacio vertical exacto entre las tarjetas de esta columna */
+    gap: 20px;
+    /* Espacio vertical exacto entre las tarjetas de esta columna */
 }
 
 /* Le sacamos el margen inferior a las tarjetas que están dentro de las columnas para que no se sume con el gap */
@@ -767,4 +855,51 @@ canvas {
     margin: 0;
     padding: 0;
     border: none;
+}
+
+/* ===== FILTROS GLOBALES DE TIEMPO ===== */
+.filtros-globales {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    background: rgba(30, 41, 59, 0.4);
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    width: fit-content;
+}
+
+.btn-filtro {
+    background: transparent;
+    border: none;
+    color: #64748b;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-filtro:hover {
+    color: #cbd5f1;
+}
+
+.btn-filtro.seleccionado {
+    background: #334155;
+    color: #f8fafc;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Ajuste responsive para los filtros en celular */
+@media (max-width: 850px) {
+    .filtros-globales {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .btn-filtro {
+        flex: 1;
+        padding: 8px 0;
+    }
 }

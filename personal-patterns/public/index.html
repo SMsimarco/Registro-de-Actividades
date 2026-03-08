@@ -5,12 +5,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro de Actividades</title>
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
     <main class="container">
-
         <aside class="panel-izquierdo">
             <section class="tarjeta">
                 <h2>Registrar día</h2>
@@ -75,9 +75,13 @@
             </section>
         </aside>
         <section class="panel-derecho">
-
+            <div class="filtros-globales">
+                <button type="button" class="btn-filtro seleccionado" onclick="cambiarFiltro('todo', this)">Histórico</button>
+                <button type="button" class="btn-filtro" onclick="cambiarFiltro('30', this)">Últimos 30 días</button>
+                <button type="button" class="btn-filtro" onclick="cambiarFiltro('7', this)">Últimos 7 días</button>
+            </div>
             <div class="tarjeta tarjeta-recomendacion">
-                <h2>🧠 Recomendación del día</h2>
+                <h2>Recomendación del día</h2>
                 <div id="recomendacionCoach">
                     <p class="texto-secundario">Cargando datos...</p>
                 </div>
@@ -155,11 +159,10 @@
                         </div>
                     </div>
 
-                    <div class="tarjeta">
-                        <h2>Costo Biológico</h2>
-                        <div id="costoBiologicoContenedor" class="grid-2-cols">
-                            <p class="texto-secundario span-2-cols">Cargá datos para descubrir tus motores y vampiros de
-                                energía.</p>
+                   <div class="tarjeta">
+                        <h2>Impacto de Energía</h2>
+                        <div id="impactoEnergiaContenedor" class="contenedor-impacto">
+                            <p class="texto-secundario">Cargá datos para descubrir qué te recarga y qué te agota.</p>
                         </div>
                     </div>
                 </div>
@@ -183,7 +186,16 @@
         </section>
     </main>
     <script src="app.js"></script>
-    <div id="toast" class="toast-hidden">Registro guardado</div>
+    <div id="toast" class="toast-hidden">Registro guardado</div>  
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registrado con éxito', reg))
+                    .catch(err => console.error('Error al registrar el Service Worker', err));
+            });
+        }
+    </script>
 </body>
-
+</body>
 </html>
