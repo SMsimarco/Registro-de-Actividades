@@ -104,22 +104,15 @@ form {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
 }
-
+/* ===== ETIQUETAS E INPUTS (MINIMALISTAS) ===== */
 .campo {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
 }
 
-.campo-metricas {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    grid-column: span 3;
-    margin-bottom: 10px;
-}
-
-/* ===== ETIQUETAS E INPUTS (MINIMALISTAS) ===== */
 label {
     font-size: 0.65rem;
     text-transform: uppercase;
@@ -132,12 +125,12 @@ label {
 input[type="text"],
 .select-jornada,
 .select-simulador {
+    width: 100%;
+    box-sizing: border-box;
     padding: 10px 12px;
     border-radius: 8px;
     border: 1px solid #334155;
-    /* Borde devuelto para que se vea el límite */
     background: #0f172a;
-    /* Fondo oscuro para mayor contraste */
     color: #f8fafc;
     font-size: 0.9rem;
     transition: all 0.2s ease;
@@ -154,22 +147,25 @@ input[type="text"]:focus,
     outline: none;
     background: #1e293b;
     border: 1px solid #38bdf8;
-    /* Se ilumina el borde al escribir */
     box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1);
 }
 
-/* ===== CAMPOS DE MÉTRICAS (DISEÑO MINIMALISTA PREMIUM) ===== */
+/* ===== CAMPOS DE MÉTRICAS (STEPPER PREMIUM) ===== */
 .campo-metricas {
     background: rgba(30, 41, 59, 0.4);
     border: 1px solid rgba(51, 65, 85, 0.6);
-    padding: 16px;
+    padding: 12px 10px; /* Reducido de 16px a 10px para dar más ancho útil */
     border-radius: 12px;
     margin-bottom: 12px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px; /* CLAVE: Fuerza una separación mínima obligatoria entre texto y botones */
     grid-column: span 3;
     transition: background 0.2s, border-color 0.2s;
+    box-sizing: border-box;
+    width: 100%;
 }
 
 .campo-metricas:hover {
@@ -182,6 +178,27 @@ input[type="text"]:focus,
     color: #f8fafc;
     font-weight: 600;
     margin: 0;
+}
+
+/* (Mantenemos .stepper-control igual) */
+.stepper-control {
+    display: flex;
+    align-items: center;
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.btn-stepper {
+    background: transparent;
+    border: none;
+    color: #38bdf8;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 6px 12px; /* Reducido de 16px a 12px para achicar el bloque de botones */
+    cursor: pointer;
+    transition: all 0.2s;
 }
 
 /* SLIDER STYLES */
@@ -282,9 +299,10 @@ input[type="text"]:focus,
 }
 
 .btn-rutina {
+    width: 100%;
+    margin-top: 5px;
     margin-bottom: 15px;
-    width: auto;
-    padding: 8px 16px;
+    display: block;
 }
 
 .quick-tags-container {
@@ -680,6 +698,7 @@ canvas {
     margin-top: 20px;
 }
 
+/* ===== 5. ACORDEONES (FALSOS BOTONES DE ACCIÓN) ===== */
 .btn-desplegar {
     background: #1e293b;
     color: #38bdf8;
@@ -689,14 +708,29 @@ canvas {
     cursor: pointer;
     font-weight: bold;
     list-style: none;
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     transition: background 0.2s;
     width: 100%;
-    display: block;
 }
 
-.btn-desplegar:hover {
-    background: #334155;
+/* Oculta la flecha nativa fea de algunos navegadores */
+.btn-desplegar::-webkit-details-marker {
+    display: none;
+}
+
+/* Agrega la flecha personalizada */
+.btn-desplegar::after {
+    content: "▼";
+    font-size: 0.8rem;
+    color: #64748b;
+    transition: transform 0.3s ease; /* Animación fluida */
+}
+
+/* Gira la flecha cuando el panel está abierto */
+details[open] > .btn-desplegar::after {
+    transform: rotate(180deg);
 }
 
 /* Toast */
@@ -724,68 +758,16 @@ canvas {
     transform: translateY(0);
 }
 
-/* ===== RESPONSIVE PARA CELULARES Y TABLETS ===== */
-@media (max-width: 850px) {
-    body {
-        padding: 15px 10px;
-        /* Reduce los márgenes exteriores para ganar pantalla */
-    }
-
-    /* 1. El formulario y el dashboard principal se apilan */
-    .container {
-        grid-template-columns: 1fr;
-        gap: 20px;
-    }
-
-    /* 2. Rompemos las 2 columnas del panel derecho para que bajen en fila */
-    .dashboard-layout {
-        grid-template-columns: 1fr;
-        gap: 0;
-        margin-bottom: 0;
-    }
-
-    /* 3. Le devolvemos el espacio a las tarjetas que ahora están una arriba de la otra */
-    .columna-dashboard {
-        gap: 0;
-    }
-
-    .columna-dashboard .tarjeta {
-        margin-bottom: 20px;
-    }
-
-    /* 4. Achicamos un poco los cuadros de Mañana/Tarde/Noche para que entren los 3 de ancho */
-    .grid-3-cols {
-        gap: 8px;
-    }
-
-    .item-heatmap {
-        padding: 10px 5px;
-    }
-
-    .item-heatmap strong {
-        font-size: 1.2rem;
-        /* Achicamos un poco el número */
-    }
-
-    .item-heatmap span {
-        font-size: 0.6rem;
-    }
-
-    /* 5. Aseguramos que la tarjeta de recomendación no desborde */
-    .tarjeta-recomendacion {
-        padding: 18px;
-    }
-}
 
 /* ===== HISTORIAL 7 DÍAS (MINI GRÁFICO) ===== */
 .historial-semanal {
     display: flex;
-    justify-content: space-between;
+    justify-content: center; /* Centra las barritas juntas */
+    gap: 15px; /* Define una separación exacta y uniforme entre cada una */
     align-items: flex-end;
     height: 60px;
     padding-top: 15px;
     border-top: 1px dashed rgba(51, 65, 85, 0.5);
-    /* Línea punteada muy sutil */
 }
 
 .dia-columna {
@@ -891,9 +873,85 @@ canvas {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Ajuste responsive para los filtros en celular */
+
+/* ===== RESPONSIVE PARA CELULARES (DISEÑO APP NATIVA) ===== */
 @media (max-width: 850px) {
+    body {
+        padding: 8px; /* Se elimina el margen exagerado para usar toda la pantalla */
+    }
+
+    .container {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .dashboard-layout, .grid-2-cols {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        margin-bottom: 0;
+    }
+
+    .columna-dashboard {
+        gap: 12px;
+    }
+
+    .tarjeta {
+        padding: 16px;
+        border-radius: 16px; /* Bordes más pronunciados, estándar en iOS/Android */
+        margin-bottom: 12px;
+    }
+
+    /* 1. Touch Targets (Altura mínima 48px para los dedos) */
+    input[type="text"], 
+    .select-jornada, 
+    .select-simulador, 
+    .btnGuardar, 
+    .btn-desplegar {
+        min-height: 48px; 
+        font-size: 1rem;
+    }
+
+    /* 2. Stepper (+ y -) más anchos y fáciles de presionar */
+    .btn-stepper {
+        padding: 10px 24px;
+        font-size: 1.5rem;
+    }
+
+    .stepper-valor {
+        width: 60px;
+        font-size: 1.1rem;
+    }
+
+    /* 3. Filtros globales adaptables */
     .filtros-globales {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .btn-filtro {
+        flex: 1 1 30%;
+        padding: 12px 0;
+        font-size: 0.85rem;
+    }
+
+    /* 4. Ajuste milimétrico de las grillas de Mañana/Tarde/Noche */
+    .grid-3-cols {
+        gap: 6px;
+    }
+
+    .item-heatmap, .item-rutina {
+        padding: 12px 4px;
+    }
+
+    .item-heatmap strong, .item-rutina strong {
+        font-size: 1.1rem;
+    }
+
+    .item-heatmap span, .item-rutina span {
+        font-size: 0.65rem;
+    }
+     .filtros-globales {
         width: 100%;
         justify-content: space-between;
     }
@@ -901,5 +959,22 @@ canvas {
     .btn-filtro {
         flex: 1;
         padding: 8px 0;
+    }
+    /* 6. Corregir campos de texto para formato móvil */
+    .campo {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        width: 100%;
+    }
+
+    .campo label {
+        font-size: 0.75rem;
+    }
+
+    input[type="text"],
+    .select-jornada {
+        width: 100%; 
     }
 }

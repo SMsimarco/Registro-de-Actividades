@@ -1,7 +1,7 @@
 let registros = [];
 let registrosFiltrados = [];
 let filtroActual = 'todo';
-let editandoId = null; 
+let editandoId = null;
 
 
 // ====== CONFIGURACIÓN SUPABASE ======
@@ -18,10 +18,10 @@ const supabaseHeaders = {
 async function cargarRegistrosDesdeBD() {
     try {
         // Le pedimos a Supabase que traiga todos los registros ordenados por id
-        const respuesta = await fetch(SUPABASE_URL + "?select=*&order=id.asc", { 
-            headers: supabaseHeaders 
+        const respuesta = await fetch(SUPABASE_URL + "?select=*&order=id.asc", {
+            headers: supabaseHeaders
         });
-        
+
         if (respuesta.ok) {
             const datos = await respuesta.json();
             registros = [];
@@ -30,7 +30,7 @@ async function cargarRegistrosDesdeBD() {
                 let jornadaDefinida = d.jornada || "No definida";
                 registros.push({
                     id: d.id,
-                    fecha: d.fecha, 
+                    fecha: d.fecha,
                     actividad: d.actividad,
                     jornada: jornadaDefinida,
                     energia: Number(d.energia),
@@ -39,7 +39,7 @@ async function cargarRegistrosDesdeBD() {
                 });
             });
 
-            aplicarFiltro(); 
+            aplicarFiltro();
         }
     } catch (error) {
         console.error("Error conectando a Supabase", error);
@@ -50,7 +50,7 @@ async function agregarRegistro(actividad, jornada, energia, enfoque, animo) {
     let fechaObj = new Date();
     fechaObj.setMinutes(fechaObj.getMinutes() - fechaObj.getTimezoneOffset());
     const fecha = fechaObj.toISOString().split('T')[0];
-    
+
     try {
         const respuesta = await fetch(SUPABASE_URL, {
             method: "POST",
@@ -70,7 +70,7 @@ async function borrarRegistro(id) {
     if (confirmacion) {
         try {
             // Supabase usa el formato ?columna=eq.valor para borrar
-            await fetch(`${SUPABASE_URL}?id=eq.${id}`, { 
+            await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
                 method: "DELETE",
                 headers: supabaseHeaders
             });
@@ -84,7 +84,7 @@ async function borrarRegistro(id) {
 async function modificarRegistro(id, actividad, jornada, energia, enfoque, animo) {
     let registroOriginal = registros.find(x => String(x.id) === String(id));
     let fecha = registroOriginal ? registroOriginal.fecha : new Date().toISOString().split('T')[0];
-    
+
     try {
         // Supabase usa PATCH para actualizar
         const respuesta = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
@@ -110,14 +110,14 @@ function calcularScore(r) {
 // ====== LÓGICA DE FILTROS GLOBALES ======
 function cambiarFiltro(dias, boton) {
     filtroActual = dias;
-    
+
     // UI de botones
     let botones = document.querySelectorAll('.btn-filtro');
     for (let i = 0; i < botones.length; i++) {
         botones[i].classList.remove('seleccionado');
     }
     boton.classList.add('seleccionado');
-    
+
     aplicarFiltro();
 }
 
@@ -139,16 +139,16 @@ function aplicarFiltro() {
 function actualizarInterfaz() {
     generarRecomendacionCoach();
     mostrarScore();
-    renderizarHistorial7Dias(); 
+    renderizarHistorial7Dias();
     mostrarComparacion();
     mostrarInsights();
     generarHeatmap();
-    generarRutinaIdeal(); 
+    generarRutinaIdeal();
     generarImpactoEnergia();
     dibujarGraficoGlobal();
     mostrarHistorial();
     generarDashboardActividades();
-    
+
     // Estas dos SIEMPRE miran el array global sin filtrar
     generarQuickTags();
     calcularRacha();
@@ -211,7 +211,7 @@ function generarRecomendacionCoach() {
     let indiceNegativo = new Date().getMilliseconds() % frasesNegativas.length;
 
     let html = `<p class="item-recomendacion">${frasesPositivas[indicePositivo]}</p>`;
-                
+
     let esOtraActividad = mejorAct !== peorAct;
     let esOtraJornada = mejorJor !== peorJor;
 
@@ -226,22 +226,22 @@ function generarRecomendacionCoach() {
 function mostrarScore() {
     let contenedor = document.getElementById("score");
     let barraRadial = document.getElementById("scoreRadialBar");
-    
+
     if (!contenedor) return;
-    
+
     let circunferencia = 314.159;
 
-    if (registrosFiltrados.length === 0) { 
-        contenedor.innerText = "0%"; 
+    if (registrosFiltrados.length === 0) {
+        contenedor.innerText = "0%";
         if (barraRadial) barraRadial.style.strokeDashoffset = circunferencia;
-        return; 
+        return;
     }
-    
+
     let ultimo = registrosFiltrados[registrosFiltrados.length - 1];
     let scoreCalculado = calcularScore(ultimo);
-    
+
     contenedor.innerText = scoreCalculado.toFixed(0) + "%";
-    
+
     if (barraRadial) {
         let offset = circunferencia - (scoreCalculado / 100) * circunferencia;
         barraRadial.style.strokeDashoffset = offset;
@@ -276,7 +276,7 @@ function renderizarHistorial7Dias() {
     let contenedor = document.getElementById("historial7Dias");
     if (!contenedor) return;
 
-    contenedor.innerHTML = ""; 
+    contenedor.innerHTML = "";
 
     if (registrosFiltrados.length === 0) {
         contenedor.style.borderTop = "none";
@@ -309,8 +309,8 @@ function renderizarHistorial7Dias() {
     for (let i = 0; i < ultimosDias.length; i++) {
         let f = ultimosDias[i];
         let promedio = datosPorDia[f].suma / datosPorDia[f].cantidad;
-        
-        let partesFecha = f.split("-"); 
+
+        let partesFecha = f.split("-");
         let labelDia = partesFecha.length >= 3 ? partesFecha[2] + "/" + partesFecha[1] : "Día";
 
         let colDiv = document.createElement("div");
@@ -321,7 +321,7 @@ function renderizarHistorial7Dias() {
 
         let fillDiv = document.createElement("div");
         fillDiv.className = "dia-barra-fill";
-        fillDiv.style.height = promedio + "%"; 
+        fillDiv.style.height = promedio + "%";
 
         let spanLabel = document.createElement("span");
         spanLabel.className = "dia-label";
@@ -330,7 +330,7 @@ function renderizarHistorial7Dias() {
         bgDiv.appendChild(fillDiv);
         colDiv.appendChild(bgDiv);
         colDiv.appendChild(spanLabel);
-        
+
         contenedor.appendChild(colDiv);
     }
 }
@@ -405,7 +405,7 @@ function analizarJornadas() {
             if (difPuntos >= 1.5 || promedios[mejorJornada] >= 8) {
                 let frase = `💡 <b>${act}</b> por la <b>${mejorJornada}</b> dispara tu productividad.`;
                 mensajes.push(frase);
-            } 
+            }
             else if (promedios[peorJornada] <= 4 && difPuntos >= 1) {
                 let frase = `⚠️ <b>${act}</b> por la <b>${peorJornada}</b> te está costando demasiado.`;
                 mensajes.push(frase);
@@ -443,15 +443,15 @@ function generarHeatmap() {
     momentos.forEach(momento => {
         let datos = resumen[momento];
         let promedio = 0;
-        
+
         if (datos.cantidad > 0) {
             promedio = Math.round(datos.suma / datos.cantidad);
         }
 
         let colorClase = "heat-nulo";
-        if (promedio >= 80) colorClase = "heat-alto";
-        else if (promedio >= 60) colorClase = "heat-medio";
-        else if (promedio > 0) colorClase = "heat-bajo";
+        if (promedio >= 75) colorClase = "heat-alto";       // Verde a partir del 75%
+        else if (promedio >= 50) colorClase = "heat-medio"; // Amarillo entre 50% y 74%
+        else if (promedio > 0) colorClase = "heat-bajo";    // Rojo por debajo del 50%
 
         let textoPromedio = promedio > 0 ? promedio + "%" : "-";
 
@@ -491,27 +491,78 @@ function dibujarGraficoGlobal() {
     let ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // 1. Padding ajustado: 25px arriba para que el texto no se corte
+    let paddingX = 15;
+    let paddingY = 25;
+    let anchoUtil = canvas.width - (paddingX * 2);
+    let altoUtil = canvas.height - (paddingY * 2);
+
     let cantidadPuntos = registrosFiltrados.length > 1 ? registrosFiltrados.length - 1 : 1;
-    let espacioX = canvas.width / cantidadPuntos;
-    
+    let espacioX = anchoUtil / cantidadPuntos;
+
+    let puntos = registrosFiltrados.map((r, i) => {
+        let score = calcularScore(r);
+        return {
+            x: paddingX + (i * espacioX),
+            y: paddingY + (altoUtil - (score * altoUtil / 100))
+        };
+    });
+
+    // 2. Degradado inferior
+    let gradiente = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradiente.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
+    gradiente.addColorStop(1, 'rgba(56, 189, 248, 0)');
+
+    ctx.beginPath();
+    ctx.moveTo(puntos[0].x, canvas.height);
+    puntos.forEach(p => ctx.lineTo(p.x, p.y));
+    ctx.lineTo(puntos[puntos.length - 1].x, canvas.height);
+    ctx.fillStyle = gradiente;
+    ctx.fill();
+
+    // 3. Sombra y línea
+    ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+
     ctx.beginPath();
     ctx.strokeStyle = "#38bdf8";
     ctx.lineWidth = 3;
+    ctx.lineJoin = "round";
 
-    registrosFiltrados.forEach((r, i) => {
-        let x = i * espacioX;
-        let y = canvas.height - (calcularScore(r) * canvas.height / 100);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    puntos.forEach((p, i) => {
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
     });
     ctx.stroke();
 
-    ctx.fillStyle = "#ffffff";
-    registrosFiltrados.forEach((r, i) => {
-        let x = i * espacioX;
-        let y = canvas.height - (calcularScore(r) * canvas.height / 100);
+   // 4. Puntos y Textos (Datos y Actividades)
+    ctx.shadowColor = 'transparent';
+
+    puntos.forEach((p, i) => {
+        let r = registrosFiltrados[i];
+        let score = calcularScore(r);
+
+        // Dibujar el punto
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f172a";
         ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        // 1. Dibujar el porcentaje arriba del punto
+        ctx.font = "bold 11px sans-serif";
+        ctx.fillStyle = "#cbd5f1"; 
+        ctx.textAlign = "center";
+        ctx.fillText(score.toFixed(0) + "%", p.x, p.y - 12);
+
+        // 2. Dibujar la actividad abajo del punto
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "#64748b"; // Gris sutil para que no sature
+        // Si la palabra tiene más de 9 letras, la recorta para evitar choques
+        let textoActividad = r.actividad.length > 9 ? r.actividad.substring(0, 8) + ".." : r.actividad;
+        ctx.fillText(textoActividad, p.x, p.y + 18);
     });
 }
 
@@ -791,7 +842,7 @@ function calcularRacha() {
 
     let hoyObj = new Date();
     let ayerObj = new Date();
-    ayerObj.setDate(hoyObj.getDate() - 1); 
+    ayerObj.setDate(hoyObj.getDate() - 1);
 
     let stringHoy = obtenerStringFecha(hoyObj);
     let stringAyer = obtenerStringFecha(ayerObj);
@@ -800,13 +851,13 @@ function calcularRacha() {
     let fechaEsperadaObj = new Date();
 
     let ultimaFecha = fechasGuardadas[0];
-    
+
     if (ultimaFecha === stringHoy) {
         racha = 1;
-        fechaEsperadaObj.setDate(hoyObj.getDate() - 1); 
+        fechaEsperadaObj.setDate(hoyObj.getDate() - 1);
     } else if (ultimaFecha === stringAyer) {
         racha = 1;
-        fechaEsperadaObj.setDate(ayerObj.getDate() - 1); 
+        fechaEsperadaObj.setDate(ayerObj.getDate() - 1);
     } else {
         contenedor.innerHTML = "🔥 0 días";
         return;
@@ -816,21 +867,25 @@ function calcularRacha() {
         let stringEsperado = obtenerStringFecha(fechaEsperadaObj);
         if (fechasGuardadas[i] === stringEsperado) {
             racha++;
-            fechaEsperadaObj.setDate(fechaEsperadaObj.getDate() - 1); 
+            fechaEsperadaObj.setDate(fechaEsperadaObj.getDate() - 1);
         } else {
-            break; 
+            break;
         }
     }
 
     contenedor.innerHTML = "🔥 " + racha + " días";
 }
 
-function mostrarToast() {
-    let toast = document.getElementById("toast");
-    if (!toast) return;
-    
-    toast.className = "toast-visible";
-    setTimeout(() => toast.className = "toast-hidden", 3000);
+function cambiarValor(id, cambio) {
+    let input = document.getElementById(id);
+    let valorActual = parseInt(input.value);
+    let nuevoValor = valorActual + cambio;
+
+    // Limita para que no baje del 1 (10%) ni pase del 10 (100%)
+    if (nuevoValor >= 1 && nuevoValor <= 10) {
+        input.value = nuevoValor; // Actualiza el dato oculto
+        document.getElementById("val-" + id).innerText = (nuevoValor * 10) + "%"; // Actualiza el texto
+    }
 }
 
 function generarRutinaIdeal() {
@@ -848,7 +903,7 @@ function generarRutinaIdeal() {
         let r = registrosFiltrados[i];
         let jor = r.jornada;
         let act = r.actividad;
-        
+
         if (promediosPorJornada[jor] !== undefined) {
             if (promediosPorJornada[jor][act] === undefined) {
                 promediosPorJornada[jor][act] = { suma: 0, cantidad: 0 };
@@ -861,11 +916,11 @@ function generarRutinaIdeal() {
     let rutina = { "Mañana": "Libre", "Tarde": "Libre", "Noche": "Libre" };
     let actividadesUsadas = [];
     let momentos = ["Mañana", "Tarde", "Noche"];
-    
+
     for (let i = 0; i < momentos.length; i++) {
         let jor = momentos[i];
         let actividades = promediosPorJornada[jor];
-        
+
         let mejorActividad = "Libre";
         let mejorPromedio = -1;
 
@@ -886,11 +941,11 @@ function generarRutinaIdeal() {
     }
 
     contenedor.innerHTML = "";
-    
+
     for (let i = 0; i < momentos.length; i++) {
         let jor = momentos[i];
         let act = rutina[jor];
-        
+
         let htmlCaja = `
             <div class="item-rutina">
                 <span>${jor}</span>
@@ -903,27 +958,45 @@ function generarRutinaIdeal() {
 
 function cargarParaEditar(id) {
     let r = registros.find(x => String(x.id) === String(id));
-    
+
     if (!r) {
         console.error("No se encontró el registro con ID:", id);
         return;
     }
-    
+
     editandoId = id;
-    
     document.getElementById("actividad").value = r.actividad;
     document.getElementById("jornada").value = r.jornada;
+
+    // Asigna el valor oculto y el texto visual
     document.getElementById("energia").value = r.energia;
+    document.getElementById("val-energia").innerText = (r.energia * 10) + "%";
+
     document.getElementById("enfoque").value = r.enfoque;
+    document.getElementById("val-enfoque").innerText = (r.enfoque * 10) + "%";
+
     document.getElementById("animo").value = r.animo;
-    
+    document.getElementById("val-animo").innerText = (r.animo * 10) + "%";
+
     let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
     if (btnGuardar) {
         btnGuardar.innerText = "Actualizar Registro";
-        btnGuardar.style.background = "#10b981"; 
+        btnGuardar.style.background = "#10b981";
     }
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' }); 
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function mostrarToast() {
+    let toast = document.getElementById("toast");
+    if (toast) {
+        toast.classList.remove("toast-hidden");
+        toast.classList.add("toast-visible");
+        setTimeout(() => {
+            toast.classList.remove("toast-visible");
+            toast.classList.add("toast-hidden");
+        }, 3000);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -932,30 +1005,39 @@ document.addEventListener('DOMContentLoaded', () => {
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
+            // 1. CAPTURAR Y CONVERTIR A NÚMEROS (CLAVE PARA SUPABASE)
             let actividad = document.getElementById("actividad").value;
             let jornada = document.getElementById("jornada").value;
-            let energia = document.getElementById("energia").value;
-            let enfoque = document.getElementById("enfoque").value;
-            let animo = document.getElementById("animo").value;
+            let energia = parseInt(document.getElementById("energia").value);
+            let enfoque = parseInt(document.getElementById("enfoque").value);
+            let animo = parseInt(document.getElementById("animo").value);
+
+            // 2. RESTAURAR TEXTOS VISUALES AL 50%
+            document.getElementById("val-energia").innerText = "50%";
+            document.getElementById("val-enfoque").innerText = "50%";
+            document.getElementById("val-animo").innerText = "50%";
 
             if (editandoId !== null) {
-                // Modo Edición
                 await modificarRegistro(editandoId, actividad, jornada, energia, enfoque, animo);
-                editandoId = null; // Reiniciamos el estado
-                
+                editandoId = null; 
                 let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
                 if (btnGuardar) {
                     btnGuardar.innerText = "Guardar Registro";
-                    btnGuardar.style.background = "#3b82f6"; // Vuelve al azul original
+                    btnGuardar.style.background = "#3b82f6"; 
                 }
             } else {
-                // Modo Creación
                 await agregarRegistro(actividad, jornada, energia, enfoque, animo);
             }
 
             form.reset();
-            setAutoMomento(); // Restauramos el selector de tiempo por defecto
-            mostrarToast();
+            
+            // 3. RESTAURAR INPUTS OCULTOS AL VALOR 5
+            document.getElementById("energia").value = 5;
+            document.getElementById("enfoque").value = 5;
+            document.getElementById("animo").value = 5;
+            
+            setAutoMomento(); 
+            mostrarToast(); // Ahora sí va a funcionar
         });
     }
     setAutoMomento();

@@ -13,7 +13,7 @@
     <main class="container">
         <aside class="panel-izquierdo">
             <section class="tarjeta">
-                <h2>Registrar día</h2>
+                <h2>Registrar</h2>
                 <form id="formRegistro">
                     <div class="campo span-3-cols">
                         <label>Actividades Recientes</label>
@@ -33,34 +33,35 @@
                             <option value="Noche">Noche</option>
                         </select>
                     </div>
-
+                    
                     <div class="campo-metricas">
-                        <label for="energia">Facilidad</label>
-                        <input type="range" id="energia" name="energia" min="1" max="10" value="5"
-                            class="slider-metrica">
-                        <div class="slider-labels">
-                            <span>Difícil</span>
-                            <span>Fluido</span>
+                        <label>Facilidad</label>
+                        <div class="stepper-control">
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('energia', -1)">-</button>
+                            <span id="val-energia" class="stepper-valor">50%</span>
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('energia', 1)">+</button>
                         </div>
+                        <input type="hidden" id="energia" value="5">
                     </div>
 
                     <div class="campo-metricas">
-                        <label for="enfoque">Productividad</label>
-                        <input type="range" id="enfoque" name="enfoque" min="1" max="10" value="5"
-                            class="slider-metrica">
-                        <div class="slider-labels">
-                            <span>Poco</span>
-                            <span>Mucho</span>
+                        <label>Productividad</label>
+                        <div class="stepper-control">
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('enfoque', -1)">-</button>
+                            <span id="val-enfoque" class="stepper-valor">50%</span>
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('enfoque', 1)">+</button>
                         </div>
+                        <input type="hidden" id="enfoque" value="5">
                     </div>
 
                     <div class="campo-metricas">
-                        <label for="animo">Energía Final</label>
-                        <input type="range" id="animo" name="animo" min="1" max="10" value="5" class="slider-metrica">
-                        <div class="slider-labels">
-                            <span>Agotado</span>
-                            <span>Entero</span>
+                        <label>Energía</label>
+                        <div class="stepper-control">
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('animo', -1)">-</button>
+                            <span id="val-animo" class="stepper-valor">50%</span>
+                            <button type="button" class="btn-stepper" onclick="cambiarValor('animo', 1)">+</button>
                         </div>
+                        <input type="hidden" id="animo" value="5">
                     </div>
 
                     <button type="submit" class="btnGuardar">Guardar Registro</button>
@@ -76,7 +77,8 @@
         </aside>
         <section class="panel-derecho">
             <div class="filtros-globales">
-                <button type="button" class="btn-filtro seleccionado" onclick="cambiarFiltro('todo', this)">Histórico</button>
+                <button type="button" class="btn-filtro seleccionado"
+                    onclick="cambiarFiltro('todo', this)">Histórico</button>
                 <button type="button" class="btn-filtro" onclick="cambiarFiltro('30', this)">Últimos 30 días</button>
                 <button type="button" class="btn-filtro" onclick="cambiarFiltro('7', this)">Últimos 7 días</button>
             </div>
@@ -92,10 +94,10 @@
                 <div class="columna-dashboard">
                     <div class="tarjeta tarjeta-core">
                         <div class="header-performance">
-                            <h2>Performance General</h2>
+                            <h2>Promedio Ultima Actividad</h2>
                             <span id="rachaFuego" class="badge-racha">🔥 0 días</span>
                         </div>
-                        
+
                         <div class="score-radial-container">
                             <svg class="radial-progress" viewBox="0 0 120 120">
                                 <defs>
@@ -159,7 +161,7 @@
                         </div>
                     </div>
 
-                   <div class="tarjeta">
+                    <div class="tarjeta">
                         <h2>Impacto de Energía</h2>
                         <div id="impactoEnergiaContenedor" class="contenedor-impacto">
                             <p class="texto-secundario">Cargá datos para descubrir qué te recarga y qué te agota.</p>
@@ -186,7 +188,7 @@
         </section>
     </main>
     <script src="app.js"></script>
-    <div id="toast" class="toast-hidden">Registro guardado</div>  
+    <div id="toast" class="toast-hidden">Registro guardado</div>
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -196,6 +198,5 @@
             });
         }
     </script>
-</body>
 </body>
 </html>
