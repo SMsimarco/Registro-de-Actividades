@@ -812,38 +812,45 @@ body {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(27, 42, 63, .96);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top: 1px solid var(--rule);
+  background: #0f1c2d;
+  border-top: 2px solid var(--rule);
   z-index: 200;
-  padding: 8px 16px calc(8px + env(safe-area-inset-bottom));
+  padding: 10px 8px calc(10px + env(safe-area-inset-bottom));
   grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
 }
 
 .mob-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   background: none;
   border: none;
   cursor: pointer;
-  padding: 6px;
+  padding: 8px 6px;
   border-radius: var(--r8);
   transition: all .15s;
 }
-.mob-tab .t-icon { font-size: 1.15rem; line-height: 1; }
+
+.mob-tab.active {
+  background: var(--paper3);
+}
+
+.mob-tab .t-icon { font-size: 1.3rem; line-height: 1; }
+
 .mob-tab .t-lbl {
   font-family: var(--sans);
-  font-size: .56rem;
+  font-size: .62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .07em;
   color: var(--ink4);
   transition: color .15s;
 }
+
 .mob-tab.active .t-lbl { color: var(--ink); }
+.mob-tab:not(.active):hover .t-lbl { color: var(--ink2); }
 
 /* ── Responsive ── */
 @media (max-width: 800px) {
@@ -871,7 +878,6 @@ body {
 
   .today-grid, .routine-grid { grid-template-columns: repeat(3, 1fr); gap: 7px; }
 
-  /* simulator — stack vertically on mobile */
   .sim-inputs { flex-direction: column; gap: 8px; }
   .sim-field  { flex: none; width: 100%; }
   .btn-sim    { width: 100%; padding: 13px; align-self: auto; }
