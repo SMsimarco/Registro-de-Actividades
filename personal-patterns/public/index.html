@@ -1,193 +1,246 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Actividades</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#F5F2ED">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Diario de Actividades</title>
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <main class="container">
-        <aside class="panel-izquierdo">
-            <section class="tarjeta">
-                <h2>Registrar</h2>
-                <form id="formRegistro">
-                    <div class="campo span-3-cols">
-                        <label>Actividades Recientes</label>
-                        <div id="quickTags" class="quick-tags-container"></div>
-                    </div>
+<div class="shell">
 
-                    <div class="campo span-3-cols">
-                        <label for="actividad">Actividad</label>
-                        <input type="text" id="actividad" name="actividad" placeholder="Ej: Estudiar" required>
-                    </div>
+  <!-- ══════════════════════════════════
+       LEFT — FORM
+  ══════════════════════════════════ -->
+  <aside class="col-left" id="panelForm">
+    <div class="left-top">
+      <span class="wordmark">diario.</span>
 
-                    <div class="campo span-3-cols">
-                        <label for="jornada">Momento</label>
-                        <select id="jornada" required class="select-jornada">
-                            <option value="Mañana">Mañana</option>
-                            <option value="Tarde">Tarde</option>
-                            <option value="Noche">Noche</option>
-                        </select>
-                    </div>
-                    
-                    <div class="campo-metricas">
-                        <label>Facilidad</label>
-                        <div class="stepper-control">
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('energia', -1)">-</button>
-                            <span id="val-energia" class="stepper-valor">50%</span>
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('energia', 1)">+</button>
-                        </div>
-                        <input type="hidden" id="energia" value="5">
-                    </div>
+      <span class="form-label">Actividad reciente</span>
+      <div class="chips-row" id="quickTags"></div>
+    </div>
 
-                    <div class="campo-metricas">
-                        <label>Productividad</label>
-                        <div class="stepper-control">
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('enfoque', -1)">-</button>
-                            <span id="val-enfoque" class="stepper-valor">50%</span>
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('enfoque', 1)">+</button>
-                        </div>
-                        <input type="hidden" id="enfoque" value="5">
-                    </div>
+    <div class="form-wrap">
+      <form id="formRegistro" autocomplete="off">
+        <input type="hidden" id="energia" value="5">
+        <input type="hidden" id="enfoque" value="5">
+        <input type="hidden" id="animo"   value="5">
 
-                    <div class="campo-metricas">
-                        <label>Energía</label>
-                        <div class="stepper-control">
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('animo', -1)">-</button>
-                            <span id="val-animo" class="stepper-valor">50%</span>
-                            <button type="button" class="btn-stepper" onclick="cambiarValor('animo', 1)">+</button>
-                        </div>
-                        <input type="hidden" id="animo" value="5">
-                    </div>
+        <span class="form-label">¿Qué hiciste?</span>
+        <input
+          class="big-input"
+          type="text"
+          id="actividad"
+          placeholder="Estudiar, correr, cocinar…"
+          required
+        >
 
-                    <button type="submit" class="btnGuardar">Guardar Registro</button>
-                </form>
+        <div style="height:24px;"></div>
 
-                <hr class="divisor">
+        <span class="form-label">¿Cuándo?</span>
+        <div class="moment-row" id="momentRow">
+          <button type="button" class="moment-btn" data-val="Mañana" onclick="selMomento(this)">
+            <span class="moment-label">Mañana</span>
+          </button>
+          <button type="button" class="moment-btn" data-val="Tarde" onclick="selMomento(this)">
+            <span class="moment-label">Tarde</span>
+          </button>
+          <button type="button" class="moment-btn" data-val="Noche" onclick="selMomento(this)">
+            <span class="moment-label">Noche</span>
+          </button>
+        </div>
+        <input type="hidden" id="jornada" value="Mañana">
 
-                <details class="panel-analitica">
-                    <summary class="btn-desplegar">Ver Últimos Registros</summary>
-                    <div id="historialLista" class="contenedor-historial"></div>
-                </details>
-            </section>
-        </aside>
-        <section class="panel-derecho">
-            <div class="filtros-globales">
-                <button type="button" class="btn-filtro seleccionado"
-                    onclick="cambiarFiltro('todo', this)">Histórico</button>
-                <button type="button" class="btn-filtro" onclick="cambiarFiltro('30', this)">Últimos 30 días</button>
-                <button type="button" class="btn-filtro" onclick="cambiarFiltro('7', this)">Últimos 7 días</button>
+        <span class="form-label">¿Cómo te fue?</span>
+        <div class="metrics-section">
+          <div class="metric-row">
+            <span class="metric-name">Facilidad</span>
+            <div class="stepper">
+              <button type="button" class="s-btn" onclick="cambiarValor('energia',-1)">−</button>
+              <span class="stepper-val" id="val-energia">50%</span>
+              <button type="button" class="s-btn" onclick="cambiarValor('energia', 1)">+</button>
             </div>
-            <div class="tarjeta tarjeta-recomendacion">
-                <h2>Recomendación del día</h2>
-                <div id="recomendacionCoach">
-                    <p class="texto-secundario">Cargando datos...</p>
-                </div>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Productividad</span>
+            <div class="stepper">
+              <button type="button" class="s-btn" onclick="cambiarValor('enfoque',-1)">−</button>
+              <span class="stepper-val" id="val-enfoque">50%</span>
+              <button type="button" class="s-btn" onclick="cambiarValor('enfoque', 1)">+</button>
             </div>
-
-            <div class="dashboard-layout">
-
-                <div class="columna-dashboard">
-                    <div class="tarjeta tarjeta-core">
-                        <div class="header-performance">
-                            <h2>Promedio Ultima Actividad</h2>
-                            <span id="rachaFuego" class="badge-racha">🔥 0 días</span>
-                        </div>
-
-                        <div class="score-radial-container">
-                            <svg class="radial-progress" viewBox="0 0 120 120">
-                                <defs>
-                                    <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stop-color="#38bdf8" />
-                                        <stop offset="100%" stop-color="#3b82f6" />
-                                    </linearGradient>
-                                </defs>
-                                <circle class="radial-bg" cx="60" cy="60" r="50"></circle>
-                                <circle class="radial-bar" id="scoreRadialBar" cx="60" cy="60" r="50"></circle>
-                            </svg>
-                            <div class="score-text-overlay">
-                                <h3 id="score">0%</h3>
-                            </div>
-                        </div>
-
-                        <p id="comparacion" class="texto-secundario text-center"></p>
-                        <div id="historial7Dias" class="historial-semanal"></div>
-                    </div>
-
-                    <div class="tarjeta">
-                        <h2>Insights</h2>
-                        <div id="insights"></div>
-                    </div>
-                </div>
-
-                <div class="columna-dashboard">
-                    <div class="tarjeta">
-                        <h2>Rendimiento del Día</h2>
-                        <div id="heatmapContenedor" class="grid-3-cols"></div>
-                    </div>
-
-                    <div class="tarjeta">
-                        <h2>Tu Rutina Ideal</h2>
-                        <button onclick="generarRutinaIdeal()" class="btnGuardar btn-rutina">Generar Plan</button>
-                        <div id="rutinaContenedor" class="grid-3-cols">
-                            <p class="texto-secundario span-3-cols">Haz clic en Generar Plan para calcular tu día
-                                óptimo.</p>
-                        </div>
-                    </div>
-                </div>
+          </div>
+          <div class="metric-row">
+            <span class="metric-name">Energía</span>
+            <div class="stepper">
+              <button type="button" class="s-btn" onclick="cambiarValor('animo',-1)">−</button>
+              <span class="stepper-val" id="val-animo">50%</span>
+              <button type="button" class="s-btn" onclick="cambiarValor('animo', 1)">+</button>
             </div>
+          </div>
+        </div>
 
-            <details class="panel-analitica margin-top-tarjetas">
-                <summary class="btn-desplegar">Ver Herramientas Avanzadas (Simulador y Costo)</summary>
-                <div class="grid-2-cols" style="margin-top: 15px;">
-                    <div class="tarjeta tarjeta-simulador">
-                        <h2>Simulador de Rendimiento</h2>
-                        <div class="controles-simulador">
-                            <input type="text" id="simActividad" placeholder="Ej: Estudiar">
-                            <select id="simJornada" class="select-simulador">
-                                <option value="Mañana">Mañana</option>
-                                <option value="Tarde">Tarde</option>
-                                <option value="Noche">Noche</option>
-                            </select>
-                            <button onclick="calcularPrediccion()" class="btnGuardar btnSimular">Simular</button>
-                        </div>
-                        <div id="resultadoSimulador">
-                            <p class="texto-secundario">Ingresá una actividad y un momento para ver tu rendimiento
-                                esperado.</p>
-                        </div>
-                    </div>
+        <button type="submit" class="btn-save" id="btnSave">Guardar</button>
+      </form>
 
-                    <div class="tarjeta">
-                        <h2>Impacto de Energía</h2>
-                        <div id="impactoEnergiaContenedor" class="contenedor-impacto">
-                            <p class="texto-secundario">Cargá datos para descubrir qué te recarga y qué te agota.</p>
-                        </div>
-                    </div>
-                </div>
-            </details>
+      <div style="height:20px;"></div>
+    </div>
 
-            <details class="panel-analitica margin-top-tarjetas">
-                <summary class="btn-desplegar">Ver Analítica Global</summary>
+    <!-- history -->
+    <div class="history-acc" id="histAcc">
+      <button class="history-toggle" onclick="toggleHistory()">
+        Registros recientes
+        <span class="history-arr">▾</span>
+      </button>
+      <div class="history-body" id="historialLista"></div>
+    </div>
+  </aside>
 
-                <div class="tarjeta" style="margin-top: 15px;">
-                    <h2>Progreso Global</h2>
-                    <canvas id="grafico" width="600" height="150"></canvas>
-                    <div id="listaPatrones" class="lista-patrones-horizontal"></div>
-                </div>
+  <!-- ══════════════════════════════════
+       RIGHT — DASHBOARD
+  ══════════════════════════════════ -->
+  <main class="col-right mob-show" id="panelDash">
 
-                <div class="tarjeta">
-                    <h2>Dashboard por Actividad</h2>
-                    <div id="dashboardActividades" class="grid-actividades"></div>
-                </div>
-            </details>
+    <div class="tab-row" id="tabRow">
+      <button class="tab-btn active" onclick="cambiarFiltro('todo', this)">Todo</button>
+      <button class="tab-btn" onclick="cambiarFiltro('30', this)">30 días</button>
+      <button class="tab-btn" onclick="cambiarFiltro('7', this)">7 días</button>
+    </div>
 
-        </section>
-    </main>
-    <script src="app.js"></script>
-    <div id="toast" class="toast-hidden">Registro guardado</div>
-</body>
+    <h1 class="dash-title" id="dashTitle">Tu rendimiento</h1>
+    <p  class="dash-subtitle" id="dashSub">Cargando datos…</p>
+
+    <!-- Stats row -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-cell">
+        <span class="stat-value" id="statScore">—</span>
+        <span class="stat-label">Último score</span>
+        <span class="stat-change" id="statChange"></span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-value" id="statRacha">0</span>
+        <span class="stat-label">Días seguidos</span>
+        <span class="stat-change">racha activa</span>
+      </div>
+      <div class="stat-cell">
+        <span class="stat-value" id="statTotal">0</span>
+        <span class="stat-label">Registros</span>
+        <span class="stat-change" id="statPeriod">en este período</span>
+      </div>
+    </div>
+
+    <!-- Recommendation -->
+    <h2 class="section-title">Lo que dicen tus datos</h2>
+    <div class="rec-block" id="recomendacionCoach">
+      <p class="empty">Cargando…</p>
+    </div>
+
+    <!-- Day heatmap -->
+    <h2 class="section-title">Rendimiento por momento del día</h2>
+    <div class="today-grid" id="heatmapContenedor"></div>
+
+    <div class="divider"></div>
+
+    <!-- Week bars -->
+    <h2 class="section-title">Últimos días</h2>
+    <div class="week-chart">
+      <div class="week-bars" id="historial7Dias"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Insights -->
+    <h2 class="section-title">Patrones que encontré</h2>
+    <div class="insight-list" id="insights">
+      <p class="empty">Necesitás al menos 2 registros.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Activity table -->
+    <h2 class="section-title">Por actividad</h2>
+    <table class="act-table" id="actTable">
+      <thead>
+        <tr>
+          <th>Actividad</th>
+          <th>Registros</th>
+          <th>Promedio</th>
+          <th>Tendencia</th>
+        </tr>
+      </thead>
+      <tbody id="actTableBody"></tbody>
+    </table>
+
+    <!-- Routine -->
+    <h2 class="section-title">Tu rutina ideal</h2>
+    <p class="empty" id="routineNote" style="margin-bottom:12px;">
+      Basado en cuándo rendís mejor para cada actividad.
+    </p>
+    <div class="routine-grid" id="rutinaContenedor"></div>
+
+    <div class="divider"></div>
+
+    <!-- Energy -->
+    <h2 class="section-title">Impacto en tu energía</h2>
+    <div class="energy-pair" id="impactoEnergiaContenedor">
+      <p class="empty">Cargá datos para ver qué te recarga.</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Simulator -->
+    <h2 class="section-title">Simulador</h2>
+    <div class="sim-block">
+      <div class="sim-inputs">
+        <div class="sim-field">
+          <label>Actividad</label>
+          <input class="sim-input" type="text" id="simActividad" placeholder="Ej: Estudiar" autocomplete="off">
+        </div>
+        <div class="sim-field" style="flex:.7">
+          <label>Momento</label>
+          <select class="sim-select" id="simJornada">
+            <option value="Mañana">Mañana</option>
+            <option value="Tarde">Tarde</option>
+            <option value="Noche">Noche</option>
+          </select>
+        </div>
+        <button class="btn-sim" onclick="calcularPrediccion()">Simular</button>
+      </div>
+      <div id="resultadoSimulador">
+        <p class="sim-result">Ingresá una actividad para ver tu rendimiento esperado.</p>
+      </div>
+    </div>
+
+    <!-- Global chart -->
+    <h2 class="section-title">Progreso en el tiempo</h2>
+    <canvas id="grafico" width="600" height="140"></canvas>
+    <div id="listaPatrones"></div>
+
+  </main>
+</div>
+
+<!-- Mobile bottom bar -->
+<nav class="mob-bar" id="mobBar">
+  <button class="mob-tab" id="tab-form" onclick="mobSwitch('form')">
+    <span class="t-lbl">Registrar</span>
+  </button>
+  <button class="mob-tab active" id="tab-dash" onclick="mobSwitch('dash')">
+    <span class="t-lbl">Dashboard</span>
+  </button>
+  <button class="mob-tab" id="tab-stats" onclick="mobSwitch('stats')">
+
+    <span class="t-lbl">Insights</span>
+  </button>
+</nav>
+
+<div id="toast">Guardado</div>
+
+<script src="app.js"></script>
 </html>

@@ -1,1045 +1,604 @@
-let registros = [];
-let registrosFiltrados = [];
-let filtroActual = 'todo';
-let editandoId = null;
-
-
-// ====== CONFIGURACIÓN SUPABASE ======
+/* ── Config ── */
 const SUPABASE_URL = "https://ortxannsshuuxqcfkxlj.supabase.co/rest/v1/daily_logs";
 const SUPABASE_KEY = "sb_publishable_zGauV0bkumP5Q0UI6pyxhQ_BIi6eQfR";
-
-const supabaseHeaders = {
-    "Content-Type": "application/json",
-    "apikey": SUPABASE_KEY,
-    "Authorization": "Bearer " + SUPABASE_KEY
+const HEADERS = {
+  "Content-Type": "application/json",
+  "apikey": SUPABASE_KEY,
+  "Authorization": "Bearer " + SUPABASE_KEY
 };
 
-// ====== CONEXIÓN A BASE DE DATOS EN LA NUBE ======
-async function cargarRegistrosDesdeBD() {
-    try {
-        // Le pedimos a Supabase que traiga todos los registros ordenados por id
-        const respuesta = await fetch(SUPABASE_URL + "?select=*&order=id.asc", {
-            headers: supabaseHeaders
-        });
+/* ── State ── */
+let registros = [];
+let filtrados = [];
+let filtro = 'todo';
+let editandoId = null;
 
-        if (respuesta.ok) {
-            const datos = await respuesta.json();
-            registros = [];
-
-            datos.forEach(d => {
-                let jornadaDefinida = d.jornada || "No definida";
-                registros.push({
-                    id: d.id,
-                    fecha: d.fecha,
-                    actividad: d.actividad,
-                    jornada: jornadaDefinida,
-                    energia: Number(d.energia),
-                    enfoque: Number(d.enfoque),
-                    animo: Number(d.animo)
-                });
-            });
-
-            aplicarFiltro();
-        }
-    } catch (error) {
-        console.error("Error conectando a Supabase", error);
-    }
+/* ── Score ── */
+function score(r) {
+  return ((r.energia + r.enfoque + r.animo) / 3) * 10;
 }
 
-async function agregarRegistro(actividad, jornada, energia, enfoque, animo) {
-    let fechaObj = new Date();
-    fechaObj.setMinutes(fechaObj.getMinutes() - fechaObj.getTimezoneOffset());
-    const fecha = fechaObj.toISOString().split('T')[0];
+/* ── Supabase ── */
+async function cargar() {
+  try {
+    const res = await fetch(SUPABASE_URL + "?select=*&order=id.asc", { headers: HEADERS });
+    if (!res.ok) return;
+    registros = (await res.json()).map(d => ({
+      id: d.id, fecha: d.fecha, actividad: d.actividad,
+      jornada: d.jornada || "Mañana",
+      energia: +d.energia, enfoque: +d.enfoque, animo: +d.animo
+    }));
+    aplicarFiltro();
+  } catch(e) { console.error(e); }
+}
 
-    try {
-        const respuesta = await fetch(SUPABASE_URL, {
-            method: "POST",
-            headers: supabaseHeaders,
-            body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
-        });
-        if (respuesta.ok) {
-            await cargarRegistrosDesdeBD();
-        }
-    } catch (error) {
-        console.error("Error guardando dato en Supabase", error);
-    }
+async function guardar(actividad, jornada, energia, enfoque, animo) {
+  const d = new Date();
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  const fecha = d.toISOString().split('T')[0];
+  const res = await fetch(SUPABASE_URL, {
+    method: "POST", headers: HEADERS,
+    body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
+  });
+  if (res.ok) await cargar();
+}
+
+async function actualizar(id, actividad, jornada, energia, enfoque, animo) {
+  const orig = registros.find(r => String(r.id) === String(id));
+  const fecha = orig ? orig.fecha : new Date().toISOString().split('T')[0];
+  const res = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
+    method: "PATCH", headers: HEADERS,
+    body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
+  });
+  if (res.ok) await cargar();
 }
 
 async function borrarRegistro(id) {
-    let confirmacion = confirm("¿Seguro que querés borrar este registro?");
-    if (confirmacion) {
-        try {
-            // Supabase usa el formato ?columna=eq.valor para borrar
-            await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
-                method: "DELETE",
-                headers: supabaseHeaders
-            });
-            await cargarRegistrosDesdeBD();
-        } catch (error) {
-            console.error("Error borrando dato en Supabase", error);
-        }
-    }
+  if (!confirm("¿Borrar este registro?")) return;
+  await fetch(`${SUPABASE_URL}?id=eq.${id}`, { method: "DELETE", headers: HEADERS });
+  await cargar();
 }
 
-async function modificarRegistro(id, actividad, jornada, energia, enfoque, animo) {
-    let registroOriginal = registros.find(x => String(x.id) === String(id));
-    let fecha = registroOriginal ? registroOriginal.fecha : new Date().toISOString().split('T')[0];
-
-    try {
-        // Supabase usa PATCH para actualizar
-        const respuesta = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
-            method: "PATCH",
-            headers: supabaseHeaders,
-            body: JSON.stringify({ fecha, actividad, jornada, energia, enfoque, animo })
-        });
-        if (respuesta.ok) {
-            await cargarRegistrosDesdeBD();
-        }
-    } catch (error) {
-        console.error("Error actualizando dato en Supabase", error);
-    }
-}
-
-// calcular total
-function calcularScore(r) {
-    let promedio = (r.energia + r.enfoque + r.animo) / 3;
-    return promedio * 10;
-}
-
-
-// ====== LÓGICA DE FILTROS GLOBALES ======
-function cambiarFiltro(dias, boton) {
-    filtroActual = dias;
-
-    // UI de botones
-    let botones = document.querySelectorAll('.btn-filtro');
-    for (let i = 0; i < botones.length; i++) {
-        botones[i].classList.remove('seleccionado');
-    }
-    boton.classList.add('seleccionado');
-
-    aplicarFiltro();
+/* ── Filtro ── */
+function cambiarFiltro(dias, btn) {
+  filtro = dias;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  aplicarFiltro();
 }
 
 function aplicarFiltro() {
-    if (filtroActual === 'todo') {
-        registrosFiltrados = [...registros];
-    } else {
-        let diasRestar = parseInt(filtroActual);
-        let fechaLimite = new Date();
-        fechaLimite.setDate(fechaLimite.getDate() - diasRestar);
-        let stringLimite = fechaLimite.toISOString().split('T')[0];
-
-        registrosFiltrados = registros.filter(r => r.fecha >= stringLimite);
-    }
-    actualizarInterfaz();
+  if (filtro === 'todo') {
+    filtrados = [...registros];
+  } else {
+    const corte = new Date();
+    corte.setDate(corte.getDate() - parseInt(filtro));
+    const lim = corte.toISOString().split('T')[0];
+    filtrados = registros.filter(r => r.fecha >= lim);
+  }
+  render();
 }
 
-// ====== MOTOR CENTRAL DE UI ======
-function actualizarInterfaz() {
-    generarRecomendacionCoach();
-    mostrarScore();
-    renderizarHistorial7Dias();
-    mostrarComparacion();
-    mostrarInsights();
-    generarHeatmap();
-    generarRutinaIdeal();
-    generarImpactoEnergia();
-    dibujarGraficoGlobal();
-    mostrarHistorial();
-    generarDashboardActividades();
-
-    // Estas dos SIEMPRE miran el array global sin filtrar
-    generarQuickTags();
-    calcularRacha();
+/* ── Render principal ── */
+function render() {
+  renderStats();
+  renderRecomendacion();
+  renderHeatmap();
+  renderWeekBars();
+  renderInsights();
+  renderActTable();
+  renderRoutine();
+  renderEnergy();
+  renderGrafico();
+  renderHistorial();
+  renderChips();
+  renderRacha();
 }
 
-// ====== RECOMENDACIÓN DEL DÍA (COACH HUMANIZADO) ======
-function generarRecomendacionCoach() {
-    let contenedor = document.getElementById("recomendacionCoach");
-    if (!contenedor) return;
+/* ── Stats ── */
+function renderStats() {
+  const n = filtrados.length;
+  document.getElementById('statTotal').textContent = n;
 
-    if (registrosFiltrados.length < 3) {
-        contenedor.innerHTML = `<p class="texto-secundario">Registrá al menos 3 actividades en este período para darte consejos útiles.</p>`;
-        return;
-    }
+  if (n === 0) {
+    document.getElementById('statScore').textContent = '—';
+    document.getElementById('statChange').textContent = '';
+    document.getElementById('dashTitle').textContent = 'Tu rendimiento';
+    document.getElementById('dashSub').textContent = 'Empezá registrando tu primera actividad.';
+    return;
+  }
 
-    let resumen = {};
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        let clave = r.actividad + "|" + r.jornada;
-        if (resumen[clave] === undefined) {
-            resumen[clave] = { suma: 0, cantidad: 0 };
-        }
-        resumen[clave].suma += calcularScore(r);
-        resumen[clave].cantidad += 1;
-    }
+  const ultimo = filtrados[n - 1];
+  const s = score(ultimo);
+  document.getElementById('statScore').textContent = s.toFixed(0) + '%';
+  document.getElementById('dashTitle').textContent = ultimo.actividad;
+  document.getElementById('dashSub').textContent = `Última actividad · ${ultimo.jornada} · ${ultimo.fecha}`;
 
-    let mejorClave = "";
-    let mejorPromedio = -1;
-    let peorClave = "";
-    let peorPromedio = 999;
-
-    for (let clave in resumen) {
-        let prom = resumen[clave].suma / resumen[clave].cantidad;
-        if (prom > mejorPromedio) {
-            mejorPromedio = prom;
-            mejorClave = clave;
-        }
-        if (prom < peorPromedio) {
-            peorPromedio = prom;
-            peorClave = clave;
-        }
-    }
-
-    let [mejorAct, mejorJor] = mejorClave.split("|");
-    let [peorAct, peorJor] = peorClave.split("|");
-
-    let frasesPositivas = [
-        `Tu foco está al máximo cuando hacés <b>${mejorAct}</b> por la <b>${mejorJor}</b>. ¡Aprovechá ese impulso!`,
-        `Los datos no mienten: la <b>${mejorJor}</b> es tu momento de oro para <b>${mejorAct}</b>.`,
-        `Si querés asegurar el día, meté <b>${mejorAct}</b> durante la <b>${mejorJor}</b>. Es tu combinación ganadora.`
-    ];
-
-    let frasesNegativas = [
-        `Cuidado: <b>${peorAct}</b> por la <b>${peorJor}</b> suele drenarte. ¿Podés moverlo de horario?`,
-        `Noté fricción al hacer <b>${peorAct}</b> a la <b>${peorJor}</b>. Si podés, evitalo.`,
-        `Tu energía cae cuando intentás <b>${peorAct}</b> por la <b>${peorJor}</b>. ¡Tenelo en cuenta!`
-    ];
-
-    let indicePositivo = new Date().getMilliseconds() % frasesPositivas.length;
-    let indiceNegativo = new Date().getMilliseconds() % frasesNegativas.length;
-
-    let html = `<p class="item-recomendacion">${frasesPositivas[indicePositivo]}</p>`;
-
-    let esOtraActividad = mejorAct !== peorAct;
-    let esOtraJornada = mejorJor !== peorJor;
-
-    if (peorPromedio < 65 && (esOtraActividad || esOtraJornada)) {
-        html += `<p class="item-recomendacion texto-secundario">${frasesNegativas[indiceNegativo]}</p>`;
-    }
-
-    contenedor.innerHTML = html;
+  if (n >= 2) {
+    const dif = s - score(filtrados[n - 2]);
+    const el = document.getElementById('statChange');
+    if (dif > 0)      { el.textContent = '+' + dif.toFixed(0) + '% vs anterior'; el.className = 'stat-change up'; }
+    else if (dif < 0) { el.textContent = dif.toFixed(0) + '% vs anterior';        el.className = 'stat-change down'; }
+    else              { el.textContent = 'igual que anterior';                     el.className = 'stat-change'; }
+  }
 }
 
-// ====== SCORE VISUAL (RADIAL CHART ANIMATION) ======
-function mostrarScore() {
-    let contenedor = document.getElementById("score");
-    let barraRadial = document.getElementById("scoreRadialBar");
+/* ── Recomendación ── */
+function renderRecomendacion() {
+  const el = document.getElementById('recomendacionCoach');
+  if (filtrados.length < 3) {
+    el.innerHTML = '<p class="empty">Registrá al menos 3 actividades para ver recomendaciones.</p>';
+    return;
+  }
 
-    if (!contenedor) return;
+  const grupos = {};
+  filtrados.forEach(r => {
+    const k = r.actividad + '|' + r.jornada;
+    if (!grupos[k]) grupos[k] = [];
+    grupos[k].push(score(r));
+  });
 
-    let circunferencia = 314.159;
+  let mejorK = '', mejorP = -1, peorK = '', peorP = 999;
+  for (const k in grupos) {
+    const p = grupos[k].reduce((a, b) => a + b, 0) / grupos[k].length;
+    if (p > mejorP) { mejorP = p; mejorK = k; }
+    if (p < peorP)  { peorP = p; peorK = k; }
+  }
 
-    if (registrosFiltrados.length === 0) {
-        contenedor.innerText = "0%";
-        if (barraRadial) barraRadial.style.strokeDashoffset = circunferencia;
-        return;
-    }
+  const [mA, mJ] = mejorK.split('|');
+  const [pA, pJ] = peorK.split('|');
+  const frases = [
+    `<b>${mA}</b> por la <b>${mJ}</b>. Ése es tu momento de oro.`,
+    `Los datos muestran que <b>${mA}</b> a la <b>${mJ}</b> es tu combinación ganadora.`,
+    `<b>${mA}</b> a la <b>${mJ}</b>, te hace fluir. Priorizalo.`
+  ];
 
-    let ultimo = registrosFiltrados[registrosFiltrados.length - 1];
-    let scoreCalculado = calcularScore(ultimo);
-
-    contenedor.innerText = scoreCalculado.toFixed(0) + "%";
-
-    if (barraRadial) {
-        let offset = circunferencia - (scoreCalculado / 100) * circunferencia;
-        barraRadial.style.strokeDashoffset = offset;
-    }
+  let html = `<p class="rec-text">${frases[new Date().getDay() % frases.length]}</p>`;
+  if (peorP < 65 && (pA !== mA || pJ !== mJ)) {
+    html += `<p class="rec-sub">Ojo: <b>${pA}</b> por la <b>${pJ}</b> te cuesta más de lo normal. Considerá moverlo de horario.</p>`;
+  }
+  el.innerHTML = html;
 }
 
-function mostrarComparacion() {
-    let contenedor = document.getElementById("comparacion");
-    if (!contenedor) return;
+/* ── Heatmap ── */
+function renderHeatmap() {
+  const el = document.getElementById('heatmapContenedor');
+  if (!el) return;
 
-    if (registrosFiltrados.length < 2) {
-        contenedor.innerText = "Faltan datos para comparar";
-        return;
-    }
+  const res = { Mañana: { s:0, n:0 }, Tarde: { s:0, n:0 }, Noche: { s:0, n:0 } };
+  filtrados.forEach(r => {
+    if (res[r.jornada]) { res[r.jornada].s += score(r); res[r.jornada].n++; }
+  });
 
-    let hoy = registrosFiltrados[registrosFiltrados.length - 1];
-    let ayer = registrosFiltrados[registrosFiltrados.length - 2];
-    let dif = calcularScore(hoy) - calcularScore(ayer);
-
-    if (dif > 0) {
-        contenedor.innerHTML = `Subiste un <span class="texto-positivo">${dif.toFixed(0)}%</span> respecto al registro anterior`;
-    } else if (dif < 0) {
-        let difPositiva = Math.abs(dif);
-        contenedor.innerHTML = `Bajaste un <span class="texto-negativo">${difPositiva.toFixed(0)}%</span> respecto al registro anterior`;
-    } else {
-        contenedor.innerText = "Igual que el registro anterior";
-    }
+  el.innerHTML = ['Mañana', 'Tarde', 'Noche'].map(m => {
+    const d = res[m];
+    const prom = d.n ? Math.round(d.s / d.n) : 0;
+    const barClass = prom >= 75 ? 'bar-green' : prom >= 50 ? 'bar-amber' : prom > 0 ? 'bar-red' : '';
+    return `<div class="today-block">
+      <div class="today-moment">${m}</div>
+      <div class="today-score${d.n ? '' : ' today-empty'}">${d.n ? prom + '%' : '–'}</div>
+      <div class="today-bar"><div class="today-bar-fill ${barClass}" style="width:${prom}%"></div></div>
+    </div>`;
+  }).join('');
 }
 
-// ====== GRÁFICO HISTORIAL 7 DÍAS ======
-function renderizarHistorial7Dias() {
-    let contenedor = document.getElementById("historial7Dias");
-    if (!contenedor) return;
+/* ── Barras semanales ── */
+function renderWeekBars() {
+  const el = document.getElementById('historial7Dias');
+  if (!el) return;
 
-    contenedor.innerHTML = "";
+  if (!filtrados.length) { el.innerHTML = '<p class="empty">Sin datos.</p>'; return; }
 
-    if (registrosFiltrados.length === 0) {
-        contenedor.style.borderTop = "none";
-        let p = document.createElement("p");
-        p.className = "texto-secundario mensaje-vacio";
-        p.innerText = "Sin datos en este período.";
-        contenedor.appendChild(p);
-        return;
-    }
+  const porDia = {};
+  filtrados.forEach(r => {
+    if (!porDia[r.fecha]) porDia[r.fecha] = { s:0, n:0 };
+    porDia[r.fecha].s += score(r);
+    porDia[r.fecha].n++;
+  });
 
-    contenedor.style.borderTop = "1px dashed rgba(51, 65, 85, 0.5)";
-
-    let datosPorDia = {};
-    let fechasOrdenadas = [];
-
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        let f = r.fecha;
-        if (datosPorDia[f] === undefined) {
-            datosPorDia[f] = { suma: 0, cantidad: 0 };
-            fechasOrdenadas.push(f);
-        }
-        let score = calcularScore(r);
-        datosPorDia[f].suma = datosPorDia[f].suma + score;
-        datosPorDia[f].cantidad = datosPorDia[f].cantidad + 1;
-    }
-
-    let ultimosDias = fechasOrdenadas.slice(-7);
-
-    for (let i = 0; i < ultimosDias.length; i++) {
-        let f = ultimosDias[i];
-        let promedio = datosPorDia[f].suma / datosPorDia[f].cantidad;
-
-        let partesFecha = f.split("-");
-        let labelDia = partesFecha.length >= 3 ? partesFecha[2] + "/" + partesFecha[1] : "Día";
-
-        let colDiv = document.createElement("div");
-        colDiv.className = "dia-columna";
-
-        let bgDiv = document.createElement("div");
-        bgDiv.className = "dia-barra-bg";
-
-        let fillDiv = document.createElement("div");
-        fillDiv.className = "dia-barra-fill";
-        fillDiv.style.height = promedio + "%";
-
-        let spanLabel = document.createElement("span");
-        spanLabel.className = "dia-label";
-        spanLabel.innerText = labelDia;
-
-        bgDiv.appendChild(fillDiv);
-        colDiv.appendChild(bgDiv);
-        colDiv.appendChild(spanLabel);
-
-        contenedor.appendChild(colDiv);
-    }
+  el.innerHTML = Object.keys(porDia).sort().slice(-7).map(f => {
+    const prom = porDia[f].s / porDia[f].n;
+    const [, mes, dia] = f.split('-');
+    return `<div class="w-col">
+      <div class="w-bar-wrap"><div class="w-bar" style="height:${prom}%"></div></div>
+      <span class="w-label">${dia}/${mes}</span>
+    </div>`;
+  }).join('');
 }
 
-function mostrarInsights() {
-    let contenedor = document.getElementById("insights");
-    if (!contenedor) return;
-    contenedor.innerHTML = "";
+/* ── Insights ── */
+function renderInsights() {
+  const el = document.getElementById('insights');
+  if (!el) return;
 
-    if (registrosFiltrados.length < 2) {
-        contenedor.innerHTML = "<p class='texto-secundario'>Cargá datos para que pueda encontrar tus patrones ocultos.</p>";
-        return;
+  if (filtrados.length < 2) {
+    el.innerHTML = '<p class="empty">Necesitás al menos 2 registros.</p>'; return;
+  }
+
+  const analisis = {};
+  filtrados.forEach(r => {
+    if (!analisis[r.actividad]) analisis[r.actividad] = {};
+    if (!analisis[r.actividad][r.jornada]) analisis[r.actividad][r.jornada] = [];
+    analisis[r.actividad][r.jornada].push(r.enfoque);
+  });
+
+  const msgs = [];
+  for (const act in analisis) {
+    const proms = {};
+    for (const j in analisis[act]) {
+      const arr = analisis[act][j];
+      proms[j] = arr.reduce((a, b) => a + b, 0) / arr.length;
     }
+    const tiempos = Object.keys(proms);
+    if (tiempos.length < 2) continue;
+    const best  = tiempos.reduce((a, b) => proms[a] > proms[b] ? a : b);
+    const worst = tiempos.reduce((a, b) => proms[a] < proms[b] ? a : b);
+    if (proms[best] - proms[worst] >= 1.5 || proms[best] >= 8)
+      msgs.push({ icon: '💡', text: `<b>${act}</b> por la <b>${best}</b> dispara tu productividad.` });
+    else if (proms[worst] <= 4)
+      msgs.push({ icon: '⚠️', text: `<b>${act}</b> por la <b>${worst}</b> te está costando demasiado.` });
+  }
 
-    let mensajes = analizarJornadas();
+  el.innerHTML = msgs.length
+    ? msgs.map(m => `<div class="insight-item"><div class="insight-icon">${m.icon}</div><p class="insight-text">${m.text}</p></div>`).join('')
+    : '<p class="empty">Tu rendimiento es parejo. Seguí registrando para ver patrones.</p>';
+}
 
-    if (mensajes.length > 0) {
-        for (let i = 0; i < mensajes.length; i++) {
-            let div = document.createElement("div");
-            div.className = "item-insight";
-            div.innerHTML = mensajes[i];
-            contenedor.appendChild(div);
-        }
-    } else {
-        contenedor.innerHTML = "<p class='texto-secundario'>Tu rendimiento es súper parejo. A medida que registres más, te iré tirando tips.</p>";
+/* ── Tabla de actividades ── */
+function renderActTable() {
+  const tbody = document.getElementById('actTableBody');
+  if (!tbody) return;
+
+  const byAct = {};
+  filtrados.forEach(r => {
+    if (!byAct[r.actividad]) byAct[r.actividad] = [];
+    byAct[r.actividad].push(score(r));
+  });
+
+  if (!Object.keys(byAct).length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="empty" style="padding:16px 0;">Sin datos en este período.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = Object.entries(byAct).map(([act, scores]) => {
+    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+    let tend = '<span class="tend-badge tend-flat">—</span>';
+    if (scores.length >= 2) {
+      const dif = scores[scores.length - 1] - scores[scores.length - 2];
+      if (dif >  2) tend = `<span class="tend-badge tend-up">↑ ${dif.toFixed(0)}%</span>`;
+      if (dif < -2) tend = `<span class="tend-badge tend-down">↓ ${Math.abs(dif).toFixed(0)}%</span>`;
     }
+    return `<tr>
+      <td>${act}</td>
+      <td>${scores.length}</td>
+      <td><span class="mini-score">${avg.toFixed(0)}%</span></td>
+      <td>${tend}</td>
+    </tr>`;
+  }).join('');
 }
 
-function analizarJornadas() {
-    let analisis = {};
-    let mensajes = [];
+/* ── Rutina ideal ── */
+function renderRoutine() {
+  const el = document.getElementById('rutinaContenedor');
+  const note = document.getElementById('routineNote');
+  if (!el) return;
 
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        if (analisis[r.actividad] === undefined) {
-            analisis[r.actividad] = { "Mañana": [], "Tarde": [], "Noche": [] };
-        }
-        analisis[r.actividad][r.jornada].push(r.enfoque);
+  if (filtrados.length < 5) {
+    el.innerHTML = '';
+    if (note) note.style.display = '';
+    return;
+  }
+  if (note) note.style.display = 'none';
+
+  const pj = { Mañana: {}, Tarde: {}, Noche: {} };
+  filtrados.forEach(r => {
+    if (!pj[r.jornada][r.actividad]) pj[r.jornada][r.actividad] = { s:0, n:0 };
+    pj[r.jornada][r.actividad].s += score(r);
+    pj[r.jornada][r.actividad].n++;
+  });
+
+  const usadas = [];
+  el.innerHTML = ['Mañana', 'Tarde', 'Noche'].map(j => {
+    let best = 'Libre', bestP = -1;
+    for (const act in pj[j]) {
+      if (usadas.includes(act)) continue;
+      const p = pj[j][act].s / pj[j][act].n;
+      if (p > bestP) { bestP = p; best = act; }
     }
-
-    for (let act in analisis) {
-        let jornadas = analisis[act];
-        let promedios = {};
-
-        for (let j in jornadas) {
-            if (jornadas[j].length > 0) {
-                let suma = 0;
-                for (let k = 0; k < jornadas[j].length; k++) {
-                    suma = suma + jornadas[j][k];
-                }
-                promedios[j] = suma / jornadas[j].length;
-            }
-        }
-
-        let tiempos = Object.keys(promedios);
-        if (tiempos.length >= 2) {
-            let mejorJornada = tiempos[0];
-            let peorJornada = tiempos[0];
-
-            for (let i = 0; i < tiempos.length; i++) {
-                let j = tiempos[i];
-                if (promedios[j] > promedios[mejorJornada]) {
-                    mejorJornada = j;
-                }
-                if (promedios[j] < promedios[peorJornada]) {
-                    peorJornada = j;
-                }
-            }
-
-            let difPuntos = promedios[mejorJornada] - promedios[peorJornada];
-
-            if (difPuntos >= 1.5 || promedios[mejorJornada] >= 8) {
-                let frase = `💡 <b>${act}</b> por la <b>${mejorJornada}</b> dispara tu productividad.`;
-                mensajes.push(frase);
-            }
-            else if (promedios[peorJornada] <= 4 && difPuntos >= 1) {
-                let frase = `⚠️ <b>${act}</b> por la <b>${peorJornada}</b> te está costando demasiado.`;
-                mensajes.push(frase);
-            }
-        }
-    }
-    return mensajes;
+    if (best !== 'Libre') usadas.push(best);
+    return `<div class="routine-cell">
+      <div class="routine-moment">${j}</div>
+      <div class="routine-act">${best}</div>
+    </div>`;
+  }).join('');
 }
 
-function generarHeatmap() {
-    let contenedor = document.getElementById("heatmapContenedor");
-    if (!contenedor) return;
+/* ── Energía ── */
+function renderEnergy() {
+  const el = document.getElementById('impactoEnergiaContenedor');
+  if (!el) return;
 
-    if (registrosFiltrados.length === 0) {
-        contenedor.innerHTML = "<p class='texto-secundario' style='grid-column: span 3;'>Sin datos en este período.</p>";
-        return;
-    }
+  if (filtrados.length < 2) {
+    el.innerHTML = '<p class="empty">Cargá más datos para ver el impacto.</p>'; return;
+  }
 
-    let resumen = {
-        "Mañana": { suma: 0, cantidad: 0 },
-        "Tarde": { suma: 0, cantidad: 0 },
-        "Noche": { suma: 0, cantidad: 0 }
-    };
+  const anim = {};
+  filtrados.forEach(r => {
+    if (!anim[r.actividad]) anim[r.actividad] = { s:0, n:0 };
+    anim[r.actividad].s += r.animo;
+    anim[r.actividad].n++;
+  });
 
-    registrosFiltrados.forEach(r => {
-        if (resumen[r.jornada]) {
-            resumen[r.jornada].suma += calcularScore(r);
-            resumen[r.jornada].cantidad++;
-        }
-    });
+  let best = '', bestP = -1, worst = '', worstP = 999;
+  for (const a in anim) {
+    const p = anim[a].s / anim[a].n;
+    if (p > bestP)  { bestP = p;  best = a; }
+    if (p < worstP) { worstP = p; worst = a; }
+  }
 
-    contenedor.innerHTML = "";
-    let momentos = ["Mañana", "Tarde", "Noche"];
+  if (best === worst) { el.innerHTML = '<p class="empty">Energía pareja entre todas las actividades.</p>'; return; }
 
-    momentos.forEach(momento => {
-        let datos = resumen[momento];
-        let promedio = 0;
-
-        if (datos.cantidad > 0) {
-            promedio = Math.round(datos.suma / datos.cantidad);
-        }
-
-        let colorClase = "heat-nulo";
-        if (promedio >= 75) colorClase = "heat-alto";       // Verde a partir del 75%
-        else if (promedio >= 50) colorClase = "heat-medio"; // Amarillo entre 50% y 74%
-        else if (promedio > 0) colorClase = "heat-bajo";    // Rojo por debajo del 50%
-
-        let textoPromedio = promedio > 0 ? promedio + "%" : "-";
-
-        contenedor.innerHTML += `
-            <div class="item-heatmap ${colorClase}">
-                <span>${momento}</span>
-                <strong>${textoPromedio}</strong>
-            </div>
-        `;
-    });
+  el.innerHTML = `
+    <div class="energy-card e-plus">
+      <div class="e-label">Te recarga ✓</div>
+      <div class="e-name">${best}</div>
+    </div>
+    <div class="energy-card e-minus">
+      <div class="e-label">Te agota ↓</div>
+      <div class="e-name">${worst}</div>
+    </div>`;
 }
 
-function mostrarHistorial() {
-    let contenedor = document.getElementById("historialLista");
-    if (!contenedor) return;
-    contenedor.innerHTML = "";
-
-    let ultimos = registrosFiltrados.slice(-5).reverse();
-    ultimos.forEach(r => {
-        let div = document.createElement("div");
-        div.className = "item-historial";
-        div.innerHTML = `
-            <span><b>${r.actividad}</b> (${r.jornada}) <br> <small class="texto-muted">Enrg: ${r.energia} | Enf: ${r.enfoque} | Anim: ${r.animo}</small></span>
-            <div class="acciones-historial">
-                <button onclick="cargarParaEditar('${r.id}')" class="btnEditar">Editar</button>
-                <button onclick="borrarRegistro('${r.id}')" class="btnBorrar">Eliminar</button>
-            </div>
-        `;
-        contenedor.appendChild(div);
-    });
-}
-
-function dibujarGraficoGlobal() {
-    let canvas = document.getElementById("grafico");
-    if (!canvas || registrosFiltrados.length === 0) return;
-
-    let ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 1. Padding ajustado: 25px arriba para que el texto no se corte
-    let paddingX = 15;
-    let paddingY = 25;
-    let anchoUtil = canvas.width - (paddingX * 2);
-    let altoUtil = canvas.height - (paddingY * 2);
-
-    let cantidadPuntos = registrosFiltrados.length > 1 ? registrosFiltrados.length - 1 : 1;
-    let espacioX = anchoUtil / cantidadPuntos;
-
-    let puntos = registrosFiltrados.map((r, i) => {
-        let score = calcularScore(r);
-        return {
-            x: paddingX + (i * espacioX),
-            y: paddingY + (altoUtil - (score * altoUtil / 100))
-        };
-    });
-
-    // 2. Degradado inferior
-    let gradiente = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradiente.addColorStop(0, 'rgba(56, 189, 248, 0.2)');
-    gradiente.addColorStop(1, 'rgba(56, 189, 248, 0)');
-
-    ctx.beginPath();
-    ctx.moveTo(puntos[0].x, canvas.height);
-    puntos.forEach(p => ctx.lineTo(p.x, p.y));
-    ctx.lineTo(puntos[puntos.length - 1].x, canvas.height);
-    ctx.fillStyle = gradiente;
-    ctx.fill();
-
-    // 3. Sombra y línea
-    ctx.shadowColor = 'rgba(56, 189, 248, 0.4)';
-    ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 4;
-
-    ctx.beginPath();
-    ctx.strokeStyle = "#38bdf8";
-    ctx.lineWidth = 3;
-    ctx.lineJoin = "round";
-
-    puntos.forEach((p, i) => {
-        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y);
-    });
-    ctx.stroke();
-
-   // 4. Puntos y Textos (Datos y Actividades)
-    ctx.shadowColor = 'transparent';
-
-    puntos.forEach((p, i) => {
-        let r = registrosFiltrados[i];
-        let score = calcularScore(r);
-
-        // Dibujar el punto
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = "#0f172a";
-        ctx.fill();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = "#ffffff";
-        ctx.stroke();
-
-        // 1. Dibujar el porcentaje arriba del punto
-        ctx.font = "bold 11px sans-serif";
-        ctx.fillStyle = "#cbd5f1"; 
-        ctx.textAlign = "center";
-        ctx.fillText(score.toFixed(0) + "%", p.x, p.y - 12);
-
-        // 2. Dibujar la actividad abajo del punto
-        ctx.font = "10px sans-serif";
-        ctx.fillStyle = "#64748b"; // Gris sutil para que no sature
-        // Si la palabra tiene más de 9 letras, la recorta para evitar choques
-        let textoActividad = r.actividad.length > 9 ? r.actividad.substring(0, 8) + ".." : r.actividad;
-        ctx.fillText(textoActividad, p.x, p.y + 18);
-    });
-}
-
-function generarDashboardActividades() {
-    let contenedor = document.getElementById("dashboardActividades");
-    if (!contenedor) return;
-    contenedor.innerHTML = "";
-
-    let datosPorActividad = {};
-
-    registrosFiltrados.forEach(r => {
-        if (!datosPorActividad[r.actividad]) {
-            datosPorActividad[r.actividad] = [];
-        }
-        datosPorActividad[r.actividad].push(calcularScore(r));
-    });
-
-    for (let act in datosPorActividad) {
-        let scores = datosPorActividad[act];
-
-        if (scores.length >= 2) {
-            let dif = scores[scores.length - 1] - scores[scores.length - 2];
-            let textoTendencia = "Igual que la última vez";
-            let claseTendencia = "neutra";
-
-            if (dif > 0) {
-                textoTendencia = `Mejoraste un ${dif.toFixed(0)}%`;
-                claseTendencia = "positiva";
-            } else if (dif < 0) {
-                textoTendencia = `Empeoraste un ${Math.abs(dif).toFixed(0)}%`;
-                claseTendencia = "negativa";
-            }
-
-            let div = document.createElement("div");
-            div.className = "tarjeta-grafico";
-            div.innerHTML = `<h3>${act}</h3><p class="tendencia ${claseTendencia}">${textoTendencia}</p>`;
-
-            let canvas = document.createElement("canvas");
-            canvas.width = 400;
-            canvas.height = 100;
-
-            div.appendChild(canvas);
-            contenedor.appendChild(div);
-
-            dibujarMiniGrafico(canvas, scores);
-        }
-    }
-}
-
-function dibujarMiniGrafico(canvas, scores) {
-    let ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    let cantidadPuntos = scores.length > 1 ? scores.length - 1 : 1;
-    let espacioX = canvas.width / cantidadPuntos;
-
-    ctx.beginPath();
-    ctx.strokeStyle = "#3b82f6";
-    ctx.lineWidth = 3;
-
-    scores.forEach((score, i) => {
-        let x = i * espacioX;
-        let y = canvas.height - (score * canvas.height / 100);
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    ctx.fillStyle = "#ffffff";
-    scores.forEach((score, i) => {
-        let x = i * espacioX;
-        let y = canvas.height - (score * canvas.height / 100);
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
-    });
-}
-
-// ====== SIMULADOR DE RENDIMIENTO ======
+/* ── Simulador ── */
 function calcularPrediccion() {
-    let inputActividad = document.getElementById("simActividad");
-    let inputJornada = document.getElementById("simJornada");
-    let contenedor = document.getElementById("resultadoSimulador");
+  const act = document.getElementById('simActividad').value.trim().toLowerCase();
+  const jor = document.getElementById('simJornada').value;
+  const el  = document.getElementById('resultadoSimulador');
 
-    if (!inputActividad || !inputJornada || !contenedor) return;
+  if (!act) { el.innerHTML = '<p class="sim-result">Escribí una actividad.</p>'; return; }
 
-    let actBuscada = inputActividad.value.trim().toLowerCase();
-    let jorBuscada = inputJornada.value;
+  const avg = arr => (arr.reduce((s, r) => s + score(r), 0) / arr.length).toFixed(0);
+  const exactas = filtrados.filter(r => r.actividad.toLowerCase() === act && r.jornada === jor);
+  const simil   = filtrados.filter(r => r.actividad.toLowerCase() === act);
 
-    if (actBuscada === "") {
-        contenedor.innerHTML = `<p class="texto-secundario">Escribí una actividad para simular.</p>`;
-        return;
-    }
-
-    let exactas = [];
-    let similares = [];
-
-    // Ahora simula usando los datos del período filtrado
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        if (r.actividad.toLowerCase() === actBuscada) {
-            similares.push(r);
-            if (r.jornada === jorBuscada) {
-                exactas.push(r);
-            }
-        }
-    }
-
-    let sacarPromedio = (array) => {
-        let suma = 0;
-        for (let i = 0; i < array.length; i++) {
-            suma += calcularScore(array[i]);
-        }
-        return (suma / array.length).toFixed(0);
-    };
-
-    if (exactas.length > 0) {
-        let puntaje = sacarPromedio(exactas);
-        contenedor.innerHTML = `
-            <span class="numero-prediccion texto-positivo">${puntaje}%</span>
-            <p class="texto-secundario">Basado en tu historial reciente en este horario.</p>
-        `;
-    } else if (similares.length > 0) {
-        let puntaje = sacarPromedio(similares);
-        contenedor.innerHTML = `
-            <span class="numero-prediccion texto-muted">${puntaje}%</span>
-            <p class="texto-secundario">No lo hiciste a la ${jorBuscada}, este es tu promedio general.</p>
-        `;
-    } else {
-        contenedor.innerHTML = `
-            <span class="numero-prediccion texto-muted">?</span>
-            <p class="texto-secundario">No hay datos en este período.</p>
-        `;
-    }
+  if (exactas.length)
+    el.innerHTML = `<p class="sim-result"><span class="big-num">${avg(exactas)}%</span>Promedio para este horario.</p>`;
+  else if (simil.length)
+    el.innerHTML = `<p class="sim-result"><span class="big-num">${avg(simil)}%</span>No tenés datos a la ${jor}. Promedio general.</p>`;
+  else
+    el.innerHTML = `<p class="sim-result">No tenés registros de esta actividad aún.</p>`;
 }
 
-// ====== IMPACTO DE ENERGÍA ======
-function generarImpactoEnergia() {
-    let contenedor = document.getElementById("impactoEnergiaContenedor");
-    if (!contenedor) return;
+/* ── Gráfico global ── */
+function renderGrafico() {
+  const canvas = document.getElementById('grafico');
+  if (!canvas || !filtrados.length) return;
 
-    if (registrosFiltrados.length < 2) {
-        contenedor.innerHTML = "<p class='texto-secundario'>Faltan datos en este período para medir tu energía.</p>";
-        return;
-    }
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 600;
+  canvas.width  = W * devicePixelRatio;
+  canvas.height = 140 * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  ctx.clearRect(0, 0, W, 140);
 
-    let resumenAnimo = {};
+  const px = 16, py = 20, uw = W - px * 2, uh = 100;
+  const n = filtrados.length;
+  const pts = filtrados.map((r, i) => ({
+    x: px + i * (n > 1 ? uw / (n - 1) : uw),
+    y: py + uh - (score(r) / 100) * uh
+  }));
 
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        let act = r.actividad;
+  const g = ctx.createLinearGradient(0, py, 0, py + uh);
+  g.addColorStop(0, 'rgba(169,184,212,.18)');
+  g.addColorStop(1, 'rgba(169,184,212,0)');
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, py + uh);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length - 1].x, py + uh);
+  ctx.fillStyle = g;
+  ctx.fill();
 
-        if (resumenAnimo[act] === undefined) {
-            resumenAnimo[act] = { suma: 0, cantidad: 0 };
-        }
+  ctx.beginPath();
+  ctx.strokeStyle = '#A9B8D4';
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  pts.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.stroke();
 
-        resumenAnimo[act].suma += r.animo;
-        resumenAnimo[act].cantidad += 1;
-    }
-
-    let mejorActividad = "Ninguna";
-    let mejorPromedio = -1;
-
-    let peorActividad = "Ninguna";
-    let peorPromedio = 999;
-
-    for (let act in resumenAnimo) {
-        let datos = resumenAnimo[act];
-        let prom = datos.suma / datos.cantidad;
-
-        if (prom > mejorPromedio) {
-            mejorPromedio = prom;
-            mejorActividad = act;
-        }
-
-        if (prom < peorPromedio) {
-            peorPromedio = prom;
-            peorActividad = act;
-        }
-    }
-
-    if (mejorActividad === peorActividad) {
-        contenedor.innerHTML = "<p class='texto-secundario'>Tu energía se mantiene estable con estas actividades.</p>";
-        return;
-    }
-
-    contenedor.innerHTML = `
-        <div class="item-energia energia-positiva">
-            <div class="energia-info">
-                <span class="energia-titulo">${mejorActividad}</span>
-                <span class="energia-sub">Terminás con energía</span>
-            </div>
-            <span class="energia-icono">🔋</span>
-        </div>
-        <div class="item-energia energia-negativa">
-            <div class="energia-info">
-                <span class="energia-titulo">${peorActividad}</span>
-                <span class="energia-sub">Terminás agotado</span>
-            </div>
-            <span class="energia-icono">🪫</span>
-        </div>
-    `;
+  pts.forEach((p, i) => {
+    const s = score(filtrados[i]);
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#1B2A3F'; ctx.fill();
+    ctx.strokeStyle = '#A9B8D4'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.font = '10px sans-serif';
+    ctx.fillStyle = '#8BADD4';
+    ctx.textAlign = 'center';
+    ctx.fillText(s.toFixed(0) + '%', p.x, p.y - 9);
+  });
 }
 
-// NOTA: QuickTags sigue buscando en TODA la base de datos para sugerirte siempre tus hábitos globales.
-function generarQuickTags() {
-    let contenedor = document.getElementById("quickTags");
-    if (!contenedor) return;
+/* ── Historial ── */
+function renderHistorial() {
+  const el = document.getElementById('historialLista');
+  if (!el) return;
 
-    let conteoActividades = {};
+  const items = filtrados.slice(-6).reverse();
+  if (!items.length) { el.innerHTML = '<p class="empty" style="padding:4px 0;">Sin registros.</p>'; return; }
 
-    for (let i = 0; i < registros.length; i++) {
-        let act = registros[i].actividad;
-        if (conteoActividades[act] === undefined) conteoActividades[act] = 1;
-        else conteoActividades[act]++;
-    }
+  el.innerHTML = '';
+  items.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'h-item';
+    div.innerHTML = `
+      <span class="h-score-pill">${score(r).toFixed(0)}%</span>
+      <div class="h-info">
+        <div class="h-name">${r.actividad}</div>
+        <div class="h-meta">${r.jornada} · ${r.fecha}</div>
+      </div>
+      <div class="h-actions">
+        <button class="h-btn edit" onclick="cargarParaEditar('${r.id}')">Editar</button>
+        <button class="h-btn del"  onclick="borrarRegistro('${r.id}')">✕</button>
+      </div>`;
+    el.appendChild(div);
+  });
+}
 
-    let actividadesUnicas = Object.keys(conteoActividades);
-    actividadesUnicas.sort((a, b) => conteoActividades[b] - conteoActividades[a]);
+/* ── Chips ── */
+function renderChips() {
+  const el = document.getElementById('quickTags');
+  if (!el) return;
 
-    contenedor.innerHTML = "";
-    let maxBotones = actividadesUnicas.length < 4 ? actividadesUnicas.length : 4;
+  const cnt = {};
+  registros.forEach(r => { cnt[r.actividad] = (cnt[r.actividad] || 0) + 1; });
 
-    for (let i = 0; i < maxBotones; i++) {
-        let nombre = actividadesUnicas[i];
-        let btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn-tag";
-        btn.innerText = nombre;
-        btn.onclick = () => document.getElementById("actividad").value = nombre;
-        contenedor.appendChild(btn);
-    }
+  el.innerHTML = '';
+  Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 4).forEach(nombre => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip';
+    btn.textContent = nombre;
+    btn.onclick = () => { document.getElementById('actividad').value = nombre; };
+    el.appendChild(btn);
+  });
+}
+
+/* ── Racha ── */
+function renderRacha() {
+  const el = document.getElementById('statRacha');
+  if (!el || !registros.length) { if (el) el.textContent = '0'; return; }
+
+  const fmt = d => d.toISOString().split('T')[0];
+  const fechas = [...new Set(registros.map(r => r.fecha))].sort().reverse();
+  const hoy  = fmt(new Date());
+  const ayer = fmt(new Date(Date.now() - 86400000));
+
+  if (fechas[0] !== hoy && fechas[0] !== ayer) { el.textContent = '0'; return; }
+
+  let racha = 1;
+  for (let i = 1; i < fechas.length; i++) {
+    const esperado = new Date(fechas[i - 1] + 'T12:00:00');
+    esperado.setDate(esperado.getDate() - 1);
+    if (fechas[i] === fmt(esperado)) racha++;
+    else break;
+  }
+  el.textContent = racha;
+}
+
+/* ── Selector de momento ── */
+function selMomento(btn) {
+  document.querySelectorAll('.moment-btn').forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('jornada').value = btn.dataset.val;
 }
 
 function setAutoMomento() {
-    let select = document.getElementById("jornada");
-    if (!select) return;
-
-    let horaActual = new Date().getHours();
-    if (horaActual >= 5 && horaActual < 13) select.value = "Mañana";
-    else if (horaActual >= 13 && horaActual < 20) select.value = "Tarde";
-    else select.value = "Noche";
+  const h = new Date().getHours();
+  const val = h < 13 ? 'Mañana' : h < 20 ? 'Tarde' : 'Noche';
+  document.querySelectorAll('.moment-btn').forEach(b => b.classList.toggle('sel', b.dataset.val === val));
+  document.getElementById('jornada').value = val;
 }
 
-// NOTA: La Racha SIEMPRE analiza toda la BD, el filtro de tiempo no la corta artificialmente.
-function calcularRacha() {
-    let contenedor = document.getElementById("rachaFuego");
-    if (!contenedor) return;
-
-    if (registros.length === 0) {
-        contenedor.innerHTML = "🔥 0 días";
-        return;
-    }
-
-    let fechasGuardadas = [];
-    for (let i = 0; i < registros.length; i++) {
-        let f = registros[i].fecha;
-        if (f && !fechasGuardadas.includes(f)) {
-            fechasGuardadas.push(f);
-        }
-    }
-
-    fechasGuardadas.sort((a, b) => (a > b ? -1 : a < b ? 1 : 0));
-
-    if (fechasGuardadas.length === 0) {
-        contenedor.innerHTML = "🔥 0 días";
-        return;
-    }
-
-    function obtenerStringFecha(fechaObj) {
-        let anio = fechaObj.getFullYear();
-        let mes = fechaObj.getMonth() + 1;
-        let dia = fechaObj.getDate();
-        if (mes < 10) mes = "0" + mes;
-        if (dia < 10) dia = "0" + dia;
-        return `${anio}-${mes}-${dia}`;
-    }
-
-    let hoyObj = new Date();
-    let ayerObj = new Date();
-    ayerObj.setDate(hoyObj.getDate() - 1);
-
-    let stringHoy = obtenerStringFecha(hoyObj);
-    let stringAyer = obtenerStringFecha(ayerObj);
-
-    let racha = 0;
-    let fechaEsperadaObj = new Date();
-
-    let ultimaFecha = fechasGuardadas[0];
-
-    if (ultimaFecha === stringHoy) {
-        racha = 1;
-        fechaEsperadaObj.setDate(hoyObj.getDate() - 1);
-    } else if (ultimaFecha === stringAyer) {
-        racha = 1;
-        fechaEsperadaObj.setDate(ayerObj.getDate() - 1);
-    } else {
-        contenedor.innerHTML = "🔥 0 días";
-        return;
-    }
-
-    for (let i = 1; i < fechasGuardadas.length; i++) {
-        let stringEsperado = obtenerStringFecha(fechaEsperadaObj);
-        if (fechasGuardadas[i] === stringEsperado) {
-            racha++;
-            fechaEsperadaObj.setDate(fechaEsperadaObj.getDate() - 1);
-        } else {
-            break;
-        }
-    }
-
-    contenedor.innerHTML = "🔥 " + racha + " días";
+/* ── Stepper ── */
+function cambiarValor(id, delta) {
+  const inp = document.getElementById(id);
+  const nv = Math.max(1, Math.min(10, +inp.value + delta));
+  inp.value = nv;
+  document.getElementById('val-' + id).textContent = nv * 10 + '%';
 }
 
-function cambiarValor(id, cambio) {
-    let input = document.getElementById(id);
-    let valorActual = parseInt(input.value);
-    let nuevoValor = valorActual + cambio;
-
-    // Limita para que no baje del 1 (10%) ni pase del 10 (100%)
-    if (nuevoValor >= 1 && nuevoValor <= 10) {
-        input.value = nuevoValor; // Actualiza el dato oculto
-        document.getElementById("val-" + id).innerText = (nuevoValor * 10) + "%"; // Actualiza el texto
-    }
-}
-
-function generarRutinaIdeal() {
-    let contenedor = document.getElementById("rutinaContenedor");
-    if (contenedor === null) return;
-
-    if (registrosFiltrados.length < 5) {
-        contenedor.innerHTML = "<p class='texto-secundario span-3-cols'>Faltan datos en este período para armar la rutina.</p>";
-        return;
-    }
-
-    let promediosPorJornada = { "Mañana": {}, "Tarde": {}, "Noche": {} };
-
-    for (let i = 0; i < registrosFiltrados.length; i++) {
-        let r = registrosFiltrados[i];
-        let jor = r.jornada;
-        let act = r.actividad;
-
-        if (promediosPorJornada[jor] !== undefined) {
-            if (promediosPorJornada[jor][act] === undefined) {
-                promediosPorJornada[jor][act] = { suma: 0, cantidad: 0 };
-            }
-            promediosPorJornada[jor][act].suma += calcularScore(r);
-            promediosPorJornada[jor][act].cantidad += 1;
-        }
-    }
-
-    let rutina = { "Mañana": "Libre", "Tarde": "Libre", "Noche": "Libre" };
-    let actividadesUsadas = [];
-    let momentos = ["Mañana", "Tarde", "Noche"];
-
-    for (let i = 0; i < momentos.length; i++) {
-        let jor = momentos[i];
-        let actividades = promediosPorJornada[jor];
-
-        let mejorActividad = "Libre";
-        let mejorPromedio = -1;
-
-        for (let act in actividades) {
-            if (!actividadesUsadas.includes(act)) {
-                let prom = actividades[act].suma / actividades[act].cantidad;
-                if (prom > mejorPromedio) {
-                    mejorPromedio = prom;
-                    mejorActividad = act;
-                }
-            }
-        }
-
-        rutina[jor] = mejorActividad;
-        if (mejorActividad !== "Libre") {
-            actividadesUsadas.push(mejorActividad);
-        }
-    }
-
-    contenedor.innerHTML = "";
-
-    for (let i = 0; i < momentos.length; i++) {
-        let jor = momentos[i];
-        let act = rutina[jor];
-
-        let htmlCaja = `
-            <div class="item-rutina">
-                <span>${jor}</span>
-                <strong>${act}</strong>
-            </div>
-        `;
-        contenedor.innerHTML += htmlCaja;
-    }
-}
-
+/* ── Editar ── */
 function cargarParaEditar(id) {
-    let r = registros.find(x => String(x.id) === String(id));
-
-    if (!r) {
-        console.error("No se encontró el registro con ID:", id);
-        return;
-    }
-
-    editandoId = id;
-    document.getElementById("actividad").value = r.actividad;
-    document.getElementById("jornada").value = r.jornada;
-
-    // Asigna el valor oculto y el texto visual
-    document.getElementById("energia").value = r.energia;
-    document.getElementById("val-energia").innerText = (r.energia * 10) + "%";
-
-    document.getElementById("enfoque").value = r.enfoque;
-    document.getElementById("val-enfoque").innerText = (r.enfoque * 10) + "%";
-
-    document.getElementById("animo").value = r.animo;
-    document.getElementById("val-animo").innerText = (r.animo * 10) + "%";
-
-    let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
-    if (btnGuardar) {
-        btnGuardar.innerText = "Actualizar Registro";
-        btnGuardar.style.background = "#10b981";
-    }
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const r = registros.find(x => String(x.id) === String(id));
+  if (!r) return;
+  editandoId = id;
+  document.getElementById('actividad').value = r.actividad;
+  document.getElementById('jornada').value = r.jornada;
+  document.querySelectorAll('.moment-btn').forEach(b => b.classList.toggle('sel', b.dataset.val === r.jornada));
+  ['energia', 'enfoque', 'animo'].forEach(m => {
+    document.getElementById(m).value = r[m];
+    document.getElementById('val-' + m).textContent = r[m] * 10 + '%';
+  });
+  const btn = document.getElementById('btnSave');
+  btn.textContent = 'Actualizar';
+  btn.classList.add('editing');
+  if (window.innerWidth <= 800) mobSwitch('form');
+  document.getElementById('actividad').focus();
 }
 
+/* ── Toast ── */
 function mostrarToast() {
-    let toast = document.getElementById("toast");
-    if (toast) {
-        toast.classList.remove("toast-hidden");
-        toast.classList.add("toast-visible");
-        setTimeout(() => {
-            toast.classList.remove("toast-visible");
-            toast.classList.add("toast-hidden");
-        }, 3000);
-    }
+  const t = document.getElementById('toast');
+  t.classList.add('toast-show');
+  setTimeout(() => t.classList.remove('toast-show'), 2600);
 }
 
+/* ── Historial toggle ── */
+function toggleHistory() {
+  document.getElementById('histAcc').classList.toggle('open');
+}
+
+/* ── Mobile nav ── */
+function mobSwitch(tab) {
+  document.querySelectorAll('.mob-tab').forEach(b => b.classList.remove('active'));
+  const tabEl = document.getElementById('tab-' + tab);
+  if (tabEl) tabEl.classList.add('active');
+  const form = document.getElementById('panelForm');
+  const dash = document.getElementById('panelDash');
+  if (tab === 'form') {
+    form.classList.add('mob-show'); dash.classList.remove('mob-show');
+  } else {
+    dash.classList.add('mob-show'); form.classList.remove('mob-show');
+    if (tab === 'stats')
+      setTimeout(() => {
+        const ins = document.getElementById('insights');
+        if (ins) ins.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+  }
+}
+
+function initMobile() {
+  const mob = window.innerWidth <= 800;
+  document.getElementById('panelForm').classList.toggle('mob-show', false);
+  document.getElementById('panelDash').classList.toggle('mob-show', mob);
+  if (mob) {
+    const tabDash = document.getElementById('tab-dash');
+    if (tabDash) tabDash.classList.add('active');
+  }
+}
+
+/* ── Init ── */
 document.addEventListener('DOMContentLoaded', () => {
-    let form = document.getElementById("formRegistro");
-    if (form) {
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
+  setAutoMomento();
+  initMobile();
+  window.addEventListener('resize', initMobile);
+  window.addEventListener('resize', renderGrafico);
 
-            // 1. CAPTURAR Y CONVERTIR A NÚMEROS (CLAVE PARA SUPABASE)
-            let actividad = document.getElementById("actividad").value;
-            let jornada = document.getElementById("jornada").value;
-            let energia = parseInt(document.getElementById("energia").value);
-            let enfoque = parseInt(document.getElementById("enfoque").value);
-            let animo = parseInt(document.getElementById("animo").value);
+  document.getElementById('formRegistro').addEventListener('submit', async e => {
+    e.preventDefault();
+    const actividad = document.getElementById('actividad').value.trim();
+    const jornada   = document.getElementById('jornada').value;
+    const energia   = +document.getElementById('energia').value;
+    const enfoque   = +document.getElementById('enfoque').value;
+    const animo     = +document.getElementById('animo').value;
+    const btn       = document.getElementById('btnSave');
 
-            // 2. RESTAURAR TEXTOS VISUALES AL 50%
-            document.getElementById("val-energia").innerText = "50%";
-            document.getElementById("val-enfoque").innerText = "50%";
-            document.getElementById("val-animo").innerText = "50%";
-
-            if (editandoId !== null) {
-                await modificarRegistro(editandoId, actividad, jornada, energia, enfoque, animo);
-                editandoId = null; 
-                let btnGuardar = document.querySelector("#formRegistro .btnGuardar");
-                if (btnGuardar) {
-                    btnGuardar.innerText = "Guardar Registro";
-                    btnGuardar.style.background = "#3b82f6"; 
-                }
-            } else {
-                await agregarRegistro(actividad, jornada, energia, enfoque, animo);
-            }
-
-            form.reset();
-            
-            // 3. RESTAURAR INPUTS OCULTOS AL VALOR 5
-            document.getElementById("energia").value = 5;
-            document.getElementById("enfoque").value = 5;
-            document.getElementById("animo").value = 5;
-            
-            setAutoMomento(); 
-            mostrarToast(); // Ahora sí va a funcionar
-        });
+    if (editandoId !== null) {
+      await actualizar(editandoId, actividad, jornada, energia, enfoque, animo);
+      editandoId = null;
+      btn.textContent = 'Guardar';
+      btn.classList.remove('editing');
+    } else {
+      await guardar(actividad, jornada, energia, enfoque, animo);
     }
+
+    e.target.reset();
+    ['energia', 'enfoque', 'animo'].forEach(m => {
+      document.getElementById(m).value = 5;
+      document.getElementById('val-' + m).textContent = '50%';
+    });
     setAutoMomento();
-    cargarRegistrosDesdeBD();
+    mostrarToast();
+  });
+
+  cargar();
 });
