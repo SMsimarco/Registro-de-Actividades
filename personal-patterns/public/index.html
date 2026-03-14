@@ -16,14 +16,9 @@
 </head>
 <body>
 <div class="shell">
-
-  <!-- ══════════════════════════════════
-       LEFT — FORM
-  ══════════════════════════════════ -->
   <aside class="col-left" id="panelForm">
     <div class="left-top">
-      <span class="wordmark">diario.</span>
-
+      <span class="wordmark">Diario de Actividades</span>
       <span class="form-label">Actividad reciente</span>
       <div class="chips-row" id="quickTags"></div>
     </div>
@@ -44,7 +39,6 @@
         >
 
         <div style="height:24px;"></div>
-
         <span class="form-label">¿Cuándo?</span>
         <div class="moment-row" id="momentRow">
           <button type="button" class="moment-btn" data-val="Mañana" onclick="selMomento(this)">
@@ -103,9 +97,6 @@
     </div>
   </aside>
 
-  <!-- ══════════════════════════════════
-       RIGHT — DASHBOARD
-  ══════════════════════════════════ -->
   <main class="col-right mob-show" id="panelDash">
 
     <div class="tab-row" id="tabRow">
@@ -218,7 +209,6 @@
       </div>
     </div>
 
-    <!-- Global chart -->
     <h2 class="section-title">Progreso en el tiempo</h2>
     <canvas id="grafico" width="600" height="140"></canvas>
     <div id="listaPatrones"></div>
@@ -226,7 +216,6 @@
   </main>
 </div>
 
-<!-- Mobile bottom bar -->
 <nav class="mob-bar" id="mobBar">
   <button class="mob-tab" id="tab-form" onclick="mobSwitch('form')">
     <span class="t-lbl">Registrar</span>
@@ -235,12 +224,10 @@
     <span class="t-lbl">Dashboard</span>
   </button>
   <button class="mob-tab" id="tab-stats" onclick="mobSwitch('stats')">
-
     <span class="t-lbl">Insights</span>
   </button>
 </nav>
 
 <div id="toast">Guardado</div>
-
 <script src="app.js"></script>
 </html>
